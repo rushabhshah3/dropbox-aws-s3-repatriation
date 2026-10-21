@@ -1,0 +1,19 @@
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.xdv
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python (cost model, week 3)
+__pycache__/
+*.pyc
+.venv/
