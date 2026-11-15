@@ -74,7 +74,7 @@ export function breakEvenChart(container: HTMLElement) {
         guide.attr('x1', x(d.tb)).attr('x2', x(d.tb)).style('opacity', 1);
         const best = Math.min(d.aws, d.gcp);
         tip.show(x(d.tb), `<b>${size(d.tb)} stored</b>
-          <span class="k k-aws">AWS S3</span><span>${money(d.aws)}/mo</span>
+          <span class="k k-aws">AWS</span><span>${money(d.aws)}/mo</span>
           <span class="k k-gcp">Google Cloud</span><span>${money(d.gcp)}/mo</span>
           <span class="k k-onprem">On-prem</span><span>${money(d.onprem)}/mo</span>
           <em>${d.onprem < best ? `Owning saves ${money(best - d.onprem)}/mo` : `Renting saves ${money(d.onprem - best)}/mo`}</em>`);

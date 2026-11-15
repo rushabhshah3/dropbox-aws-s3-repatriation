@@ -4,7 +4,8 @@ import './ui/styles/tokens.css';
 import './ui/styles/app.css';
 
 import { Inputs, withPreset } from './engine/inputs';
-import { buildCost, prices, S1, scaleCurve, sensitivity, summarise, Summary } from './engine/model';
+import { buildCost, cloudBill, linearFit, prices, S1, scaleCurve, sensitivity, summarise, Summary } from './engine/model';
+import { DEFAULTS } from './engine/inputs';
 import * as state from './ui/state';
 import { mountControls } from './ui/controls';
 import { breakEvenChart } from './ui/charts/breakeven';
@@ -24,6 +25,7 @@ const NAV = [
     { id: 'sensitivity', label: 'What moves it', icon: 'sensitivity' },
   ] },
   { group: 'Evidence', items: [
+    { id: 'calculators', label: 'Calculator check', icon: 'cloud' },
     { id: 'reality', label: 'S-1 check', icon: 'evidence' },
     { id: 'assumptions', label: 'Assumptions', icon: 'assumptions' },
     { id: 'panel', label: 'Scenario', icon: 'scenario' },
@@ -44,6 +46,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="rail-foot">
       <a href="${REPO}/model.md" target="_blank" rel="noopener">${icon('info', 16)}<span>Model notes</span></a>
       <a href="${REPO}/assumptions.md" target="_blank" rel="noopener">${icon('external', 16)}<span>Sources</span></a>
+      <button type="button" class="theme-btn" id="theme-btn">${icon('info', 16)}<span>Dark theme</span></button>
       <p>IT457 Cloud Computing · Week 3</p>
     </div>
   </aside>
@@ -71,7 +74,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <section id="break-even" class="sec card reveal">
           <div class="card-head">
             <div><h2>Rent vs buy</h2><p class="sub">Monthly cost at each size, with today's growth and egress. Both axes are logarithmic.</p></div>
-            <ul class="legend"><li class="k k-aws">AWS S3</li><li class="k k-gcp">Google Cloud</li><li class="k k-onprem">On-prem</li></ul>
+            <ul class="legend"><li class="k k-aws">AWS</li><li class="k k-gcp">Google Cloud</li><li class="k k-onprem">On-prem</li></ul>
           </div>
           <div class="chart" id="chart-breakeven"></div>
           <div class="formula" id="formula"></div>
@@ -80,7 +83,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <section id="timeline" class="sec card reveal">
           <div class="card-head">
             <div><h2>Over the horizon</h2><p class="sub" id="timeline-sub"></p></div>
-            <ul class="legend"><li class="k k-aws">AWS S3</li><li class="k k-gcp">Google Cloud</li><li class="k k-onprem">On-prem</li><li class="k k-buy">Hardware bought</li></ul>
+            <ul class="legend"><li class="k k-aws">AWS</li><li class="k k-gcp">Google Cloud</li><li class="k k-onprem">On-prem</li><li class="k k-buy">Hardware bought</li></ul>
           </div>
           <div class="chart" id="chart-timeline"></div>
         </section>
@@ -95,15 +98,21 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
           <div id="tornado" class="tornado"></div>
         </section>
 
+        <section id="calculators" class="sec card reveal">
+          <div class="card-head"><div><h2>Checked against the official calculators</h2><p class="sub">The reference workload (500 PB, 50 compute servers) entered into the AWS and Google Cloud pricing calculators on 15 and 16 November 2026, next to this model at the same inputs. Monthly, list prices, no discount.</p></div></div>
+          <div class="table-wrap"><table class="assume calc" id="calc"></table></div>
+          <p class="note" id="calc-note"></p>
+        </section>
+
         <section id="reality" class="sec card reveal">
-          <div class="card-head"><div><h2>Did Dropbox's numbers make sense?</h2><p class="sub">The model at 500 PB next to the S-1 filing (February 2018). Annual figures, $ millions.</p></div></div>
+          <div class="card-head"><div><h2>Did Dropbox's numbers make sense?</h2><p class="sub">The model at 500 PB, storage only, next to the S-1 filing (February 2018). Annual figures, $ millions.</p></div></div>
           <div id="reality-body" class="reality"></div>
         </section>
 
         <section id="assumptions" class="sec card reveal">
           <div class="card-head"><div><h2>Assumptions</h2><p class="sub">Every input, its value in this scenario, and where it comes from. H primary source · M secondary · L our estimate.</p></div></div>
           <div class="table-wrap"><table class="assume" id="assume"></table></div>
-          <p class="note">Left out on purpose: application compute, metadata databases, support contracts, taxes, cost of capital, and the value of cloud elasticity. This is a storage model, not a full TCO.</p>
+          <p class="note">Left out on purpose: metadata databases, support contracts, taxes, cost of capital, and the value of cloud elasticity. Compute is a fixed fleet of always-on servers, as the guide's example workload asks, not Dropbox's whole application tier. This is a storage-first model, not a full TCO.</p>
         </section>
 
         <footer class="foot"><span><b>Pocket Ledger</b> · IT457 case study, Dropbox Magic Pocket</span><span>Prices checked November 2026</span></footer>
@@ -120,14 +129,16 @@ mountControls($('#panel'));
 const drawBreakEven = breakEvenChart($('#chart-breakeven'));
 const drawTimeline = timelineChart($('#chart-timeline'));
 
-function cloudName(s: Summary) { return s.cheapestCloud === 'aws' ? 'AWS S3' : 'Google Cloud'; }
+function cloudName(s: Summary) { return s.cheapestCloud === 'aws' ? 'AWS' : 'Google Cloud'; }
 
 function renderTicker(i: Inputs) {
   const p = prices(i);
   const items: [string, string][] = [
     ['S3 Standard', `$${p.aws.hotTiers[p.aws.hotTiers.length - 1].price}/GB`],
-    ['GCS Standard', `$${p.gcp.hotTiers[0].price}/GB`],
+    ['GCS Standard', `$${p.gcp.hotTiers[0].price}/GiB`],
     ['S3 egress at scale', `$${p.aws.egressTiers[p.aws.egressTiers.length - 1].price}/GB`],
+    [p.aws.computeType, `$${p.aws.computeHr}/h`],
+    [p.gcp.computeType, `$${p.gcp.computeHr}/h`],
     [`${i.driveTB} TB drive`, `$${i.drivePerTB}/TB`],
     ['Colocation', `$${i.coloPerKW}/kW`],
     ['Engineer', `${money(i.salary)}/yr`],
@@ -173,30 +184,26 @@ function renderOverview(i: Inputs, s: Summary) {
 }
 
 function renderFormula(i: Inputs, s: Summary) {
-  // S* = F / (c_cloud − c_onprem), estimated at 10× break-even where variable costs dominate
-  const ps = prices(i);
+  // S* = (fixed own - fixed cloud) / (cloud $/TB - own $/TB), from a straight-line fit at scale
   const at = Math.max(1000, (s.breakEvenTB ?? 1000) * 4);
-  const f = summarise({ ...i, storedTB: at });
-  const fixed = (i.baseFTE * i.salary) / 12 + buildCost(i) / i.horizonMonths;
-  const onpremPerTB = (f.onprem.total - fixed) / at;
-  const cloudPerTB = Math.min(f.cloud.aws.total, f.cloud.gcp.total) / at;
-  void ps;
+  const fit = linearFit(i, at);
+  const net = fit.ownFixed - fit.cloudFixed;
   $('#formula').innerHTML = `
-    <div class="f-eq"><span class="f-s">S*</span> = <span class="f-frac"><span>fixed cost of owning</span><span>cloud $/TB − on-prem $/TB</span></span></div>
+    <div class="f-eq"><span class="f-s">S*</span> = <span class="f-frac"><span>fixed cost of owning − fixed cost of renting</span><span>cloud $/TB − on-prem $/TB</span></span></div>
     <div class="f-nums">
-      <div><p>Fixed, per month</p><b>${money(fixed)}</b><small>base team + build team spread over ${i.horizonMonths} months</small></div>
-      <div><p>Cloud, per TB-month</p><b>$${num(cloudPerTB, 2)}</b><small>storage, egress, requests at scale</small></div>
-      <div><p>On-prem, per TB-month</p><b>$${num(onpremPerTB, 2)}</b><small>drives, servers, power, space, staff growth</small></div>
-      <div class="f-out"><p>Estimate</p><b>${size(fixed / Math.max(0.01, cloudPerTB - onpremPerTB))}</b><small>exact crossing: ${s.breakEvenTB ? size(s.breakEvenTB) : 'none'}</small></div>
+      <div><p>Net fixed, per month</p><b>${money(net)}</b><small>staff, build team, compute: own ${money(fit.ownFixed)} vs cloud ${money(fit.cloudFixed)}</small></div>
+      <div><p>Cloud, per TB-month</p><b>$${num(fit.cloudPerTB, 2)}</b><small>storage, egress, requests at scale</small></div>
+      <div><p>On-prem, per TB-month</p><b>$${num(fit.ownPerTB, 2)}</b><small>drives, servers, power, space, staff growth</small></div>
+      <div class="f-out"><p>Estimate</p><b>${fit.estimate && fit.estimate > 0 ? size(fit.estimate) : 'none'}</b><small>exact crossing: ${s.breakEvenTB ? size(s.breakEvenTB) : 'none'}</small></div>
     </div>`;
 }
 
 function renderBreakdown(i: Inputs, s: Summary) {
   const o = s.onprem;
   const options = [
-    { name: 'AWS S3', total: s.cloud.aws.total, parts: [['Storage', s.cloud.aws.storage], ['Egress', s.cloud.aws.egress], ['Retrieval', s.cloud.aws.retrieval], ['Requests', s.cloud.aws.requests]], disc: s.cloud.aws.discount, accent: false },
-    { name: 'Google Cloud', total: s.cloud.gcp.total, parts: [['Storage', s.cloud.gcp.storage], ['Egress', s.cloud.gcp.egress], ['Retrieval', s.cloud.gcp.retrieval], ['Requests', s.cloud.gcp.requests]], disc: s.cloud.gcp.discount, accent: false },
-    { name: 'On-prem', total: o.total, parts: [['Hardware', o.drives + o.servers + o.racks], ['Staff', o.staff], ['Build team', o.build], ['Space and power', o.colocation + o.energy], ['Drive swaps', o.replacement], ['Bandwidth', o.bandwidth]], disc: 0, accent: true },
+    { name: 'AWS', total: s.cloud.aws.total, parts: [['Storage', s.cloud.aws.storage], ['Egress', s.cloud.aws.egress], ['Compute', s.cloud.aws.compute], ['Retrieval', s.cloud.aws.retrieval], ['Requests', s.cloud.aws.requests]], disc: s.cloud.aws.discount, accent: false },
+    { name: 'Google Cloud', total: s.cloud.gcp.total, parts: [['Storage', s.cloud.gcp.storage], ['Egress', s.cloud.gcp.egress], ['Compute', s.cloud.gcp.compute], ['Retrieval', s.cloud.gcp.retrieval], ['Requests', s.cloud.gcp.requests]], disc: s.cloud.gcp.discount, accent: false },
+    { name: 'On-prem', total: o.total, parts: [['Storage hardware', o.drives + o.servers + o.racks], ['Staff', o.staff], ['Build team', o.build], ['Space and power', o.colocation + o.energy], ['Compute servers', o.compute], ['Drive swaps', o.replacement], ['Bandwidth', o.bandwidth]], disc: 0, accent: true },
   ] as const;
   const max = Math.max(...options.map((x) => x.total));
   const CELLS = 40;
@@ -228,10 +235,38 @@ function renderSensitivity(i: Inputs, s: Summary) {
   renderTornado($('#tornado'), rows, s.horizon.saving);
 }
 
+// Official calculator results, reference workload at month 0 (docs/Week3/calculators/)
+type CalcLine = 'storage' | 'requests' | 'retrieval' | 'egress' | 'compute';
+const CALC: Record<'aws' | 'gcp', Record<CalcLine, number>> = {
+  aws: { storage: 3_150_563.2 + 2_500_000 + 600_000, requests: 135_000, retrieval: 17_142.86 + 38_571.42, egress: 515_891.2, compute: 52_122 },
+  // Google caps operations at 10,000 million per line; requests use the full 15,000 + 150,000 million at the same rates
+  gcp: { storage: 2_793_967.62 + 1_862_645.15 + 558_793.54, requests: 135_000, retrieval: 15_965.16 + 23_948.26, egress: 745_379.72, compute: 43_827.81 },
+};
+
+function renderCalculators() {
+  const ref = { ...DEFAULTS };
+  const ps = prices(ref);
+  const m = { aws: cloudBill(ref.storedTB, ref, ps.aws), gcp: cloudBill(ref.storedTB, ref, ps.gcp) };
+  const rows: [string, CalcLine][] = [['Storage', 'storage'], ['Requests', 'requests'], ['Retrieval', 'retrieval'], ['Egress, 10 PB a month', 'egress'], ['Compute, 50 servers', 'compute']];
+  const tot = (o: Record<CalcLine, number>) => rows.reduce((acc, [, k]) => acc + o[k], 0);
+  const gap = (calc: number, model: number) => {
+    const raw = (model / calc - 1) * 100;
+    const d = Math.abs(raw) < 0.05 ? 0 : raw;
+    return `<span class="${Math.abs(d) < 1 ? 'gap-ok' : 'gap-warn'}">${d >= 0 ? '+' : '−'}${num(Math.abs(d), 1)}%</span>`;
+  };
+  const cells = (calc: number, model: number) => `<td class="mono">${money(calc)}</td><td class="mono">${money(model)}</td><td class="mono">${gap(calc, model)}</td>`;
+  $('#calc').innerHTML = `<thead><tr><th scope="col" rowspan="2">Line</th><th scope="colgroup" colspan="3">AWS, us-east-1</th><th scope="colgroup" colspan="3">Google Cloud, us-central1</th></tr>
+    <tr><th scope="col">Calculator</th><th scope="col">Model</th><th scope="col">Gap</th><th scope="col">Calculator</th><th scope="col">Model</th><th scope="col">Gap</th></tr></thead>
+    <tbody>${rows.map(([label, k]) => `<tr><td>${label}</td>${cells(CALC.aws[k], m.aws[k])}${cells(CALC.gcp[k], m.gcp[k])}</tr>`).join('')}
+    <tr class="tot"><td>Total per month</td>${cells(tot(CALC.aws), tot(m.aws))}${cells(tot(CALC.gcp), tot(m.gcp))}</tr></tbody>`;
+  $('#calc-note').innerHTML = `Two unit details matter at this scale. Google bills per GiB (2<sup>30</sup> bytes), so 500 PB is 465.7 million GiB, and the AWS calculator converts transfer at 1 TB = 1,024 GB. The model follows each provider's billing unit. Google's calculator caps operations at 10 billion per line, so its request line is the full volume at the calculator's rates. Screenshots and every line item: <a href="${REPO}/calculators/README.md" target="_blank" rel="noopener">docs/Week3/calculators</a>.`;
+}
+
 function renderReality(i: Inputs) {
   const runs = [
-    { label: 'Model, 2015-era prices', inp: { ...withPreset('dropbox2015'), discountPct: i.discountPct } },
-    { label: 'Model, 2026 prices', inp: { ...withPreset('reference'), discountPct: i.discountPct } },
+    // storage only: the S-1 lines are about where the files live
+    { label: 'Model, 2015-era prices', inp: { ...withPreset('dropbox2015'), discountPct: i.discountPct, computeServers: 0 } },
+    { label: 'Model, 2026 prices', inp: { ...withPreset('reference'), discountPct: i.discountPct, computeServers: 0 } },
   ].map((r) => {
     const s = summarise(r.inp);
     return { label: r.label, cloud: (s.cloud.aws.total * 12) / 1e6, own: (s.onprem.total * 12) / 1e6 };
@@ -254,11 +289,15 @@ function renderReality(i: Inputs) {
     </div>`;
 }
 
+const CALCS = `${REPO}/calculators/README.md`;
 const ASSUME: { k: keyof Inputs | null; label: string; fmt?: (i: Inputs) => string; conf: 'H' | 'M' | 'L'; src: string; href?: string }[] = [
-  { k: null, label: 'S3 Standard over 500 TB', fmt: (i) => `$${prices(i).aws.hotTiers.at(-1)!.price}/GB-mo`, conf: 'M', src: 'CloudZero, 2026', href: 'https://www.cloudzero.com/blog/s3-pricing/' },
-  { k: null, label: 'S3 Standard-IA / Glacier IR', fmt: (i) => `$${prices(i).aws.warm} / $${prices(i).aws.cold}`, conf: 'M', src: 'CloudZero, 2026', href: 'https://www.cloudzero.com/blog/s3-pricing/' },
-  { k: null, label: 'GCS Standard / Nearline / Coldline', fmt: (i) => `$${prices(i).gcp.hotTiers[0].price} / $${prices(i).gcp.warm} / $${prices(i).gcp.cold}`, conf: 'M', src: 'nOps, 2026', href: 'https://www.nops.io/blog/google-cloud-storage-pricing/' },
-  { k: null, label: 'GCS egress at scale', fmt: (i) => `$${prices(i).gcp.egressTiers.at(-1)!.price}/GB`, conf: 'L', src: 'single secondary source', href: 'https://leanopstech.com/blog/google-cloud-storage-pricing-2026/' },
+  { k: null, label: 'S3 Standard over 500 TB', fmt: (i) => `$${prices(i).aws.hotTiers.at(-1)!.price}/GB-mo`, conf: 'H', src: 'AWS Pricing Calculator, Nov 2026', href: CALCS },
+  { k: null, label: 'S3 Standard-IA / Glacier IR', fmt: (i) => `$${prices(i).aws.warm} / $${prices(i).aws.cold}`, conf: 'H', src: 'AWS Pricing Calculator, Nov 2026', href: CALCS },
+  { k: null, label: 'S3 egress over 150 TB', fmt: (i) => `$${prices(i).aws.egressTiers.at(-1)!.price}/GB`, conf: 'H', src: 'AWS Pricing Calculator, Nov 2026', href: CALCS },
+  { k: null, label: 'GCS Standard / Nearline / Coldline', fmt: (i) => `$${prices(i).gcp.hotTiers[0].price} / $${prices(i).gcp.warm} / $${prices(i).gcp.cold} per GiB`, conf: 'H', src: 'Google Cloud calculator, Nov 2026', href: CALCS },
+  { k: null, label: 'GCS egress at scale', fmt: (i) => `$${prices(i).gcp.egressTiers.at(-1)!.price}/GiB`, conf: 'H', src: 'Google Cloud calculator, Nov 2026', href: CALCS },
+  { k: null, label: 'Cloud compute, 32 vCPU', fmt: (i) => `$${prices(i).aws.computeHr}/h AWS · $${prices(i).gcp.computeHr}/h GCP`, conf: 'H', src: 'Both calculators, on-demand Linux', href: CALCS },
+  { k: 'computeServerCost', label: 'Bought compute server', fmt: (i) => `${money(i.computeServerCost)} · ${i.computeWatts} W`, conf: 'L', src: 'our estimate (2 × 16-core, 64 GB, 1U)' },
   { k: 'drivePerTB', label: 'Drive price', fmt: (i) => `$${i.drivePerTB}/TB`, conf: 'M', src: 'HDDHunt, Aug–Nov 2026', href: 'https://hddhunt.com/blog/hdd-price-per-tb-august-2026/' },
   { k: 'afrPct', label: 'Drive annual failure rate', fmt: (i) => `${i.afrPct}%`, conf: 'H', src: 'Backblaze Q1 2026' },
   { k: 'drivesPerServer', label: 'Drives per server', fmt: (i) => `${i.drivesPerServer}`, conf: 'H', src: 'InfoQ, Magic Pocket talk 2023' },
@@ -292,6 +331,7 @@ function render(i: Inputs) {
     renderBreakdown(i, s);
     renderSensitivity(i, s);
     renderReality(i);
+    renderCalculators();
     renderAssumptions(i);
   });
 }
@@ -307,6 +347,22 @@ const spy = new IntersectionObserver((entries) => {
   });
 }, { rootMargin: '-35% 0px -60% 0px' });
 document.querySelectorAll('.sec').forEach((s) => spy.observe(s));
+
+// light / dark toggle; follows the system until the viewer picks one
+const themeBtn = $('#theme-btn');
+const isDark = () => document.documentElement.dataset.theme
+  ? document.documentElement.dataset.theme === 'dark'
+  : matchMedia('(prefers-color-scheme: dark)').matches;
+const paintThemeBtn = () => { themeBtn.querySelector('span')!.textContent = isDark() ? 'Light theme' : 'Dark theme'; };
+try { const t = localStorage.getItem('pl-theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch { /* storage blocked */ }
+paintThemeBtn();
+themeBtn.addEventListener('click', () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('pl-theme', next); } catch { /* storage blocked */ }
+  paintThemeBtn();
+  render(state.get()); // charts read colours at draw time
+});
 
 // staggered first reveal
 document.documentElement.classList.add('ready');

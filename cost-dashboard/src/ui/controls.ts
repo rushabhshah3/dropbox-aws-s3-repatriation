@@ -23,6 +23,14 @@ const GROUPS: { title: string; open: boolean; ctls: Ctl[] }[] = [
     ],
   },
   {
+    title: 'Compute',
+    open: true,
+    ctls: [
+      { kind: 'range', key: 'computeServers', label: 'Compute servers', min: 0, max: 500, step: 5, fmt: (v) => `${v}`, hint: '32-vCPU servers running all month. Cloud: c7i.8xlarge on AWS, c2d-highcpu-32 on Google. On-prem: bought and racked.' },
+      { kind: 'range', key: 'computeServerCost', label: 'Bought server price', min: 6000, max: 40000, step: 500, fmt: (v) => money(v) },
+    ],
+  },
+  {
     title: 'Cloud',
     open: true,
     ctls: [

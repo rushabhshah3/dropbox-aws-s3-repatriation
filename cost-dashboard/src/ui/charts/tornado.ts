@@ -7,6 +7,7 @@ const fmtVal = (r: SensitivityRow, v: number) => {
   if (r.key === 'drivePerTB' || r.key === 'coloPerKW') return `$${v}`;
   if (r.key === 'redundancy') return `${num(v, 1)}×`;
   if (r.key === 'pbPerFTE') return `${v} PB`;
+  if (r.key === 'computeServers') return `${v} srv`;
   return `${num(v, 1).replace(/\.0$/, '')}%`;
 };
 

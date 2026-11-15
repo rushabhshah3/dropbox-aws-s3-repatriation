@@ -62,7 +62,7 @@ export function timelineChart(container: HTMLElement) {
         const r = rows[mth];
         guide.attr('x1', x(mth)).attr('x2', x(mth)).style('opacity', 1);
         tip.show(x(mth), `<b>Month ${mth} · ${size(r.tb)}</b>
-          <span class="k k-aws">AWS S3</span><span>${money(r.awsCum)}</span>
+          <span class="k k-aws">AWS</span><span>${money(r.awsCum)}</span>
           <span class="k k-gcp">Google Cloud</span><span>${money(r.gcpCum)}</span>
           <span class="k k-onprem">On-prem</span><span>${money(r.onpremCum)}</span>
           ${r.hardwareBought ? `<em>Hardware bought this month: ${money(r.hardwareBought)}</em>` : ''}`);
