@@ -1,0 +1,23 @@
+Google Cloud Pricing Calculator (cloud.google.com/products/calculator), Iowa (us-central1), list prices.
+Cost Estimate Summary as of 16 Nov 2026. Google bills storage and transfer per GiB (2^30 bytes), so the
+reference workload was converted: 150 PB = 139,698,386 GiB; 200 PB = 186,264,515 GiB; 10 PB = 9,095 TiB.
+
+COMPUTE                                                        $43,827.81
+  50 x c2d-highcpu-32 (32 vCPU, 64 GB), 36,500 instance-hours   $43,777.81   (= $1.1994 per hour each)
+  Boot disks, 50 x 10 GiB balanced                               $50.00
+NETWORKING
+  Internet data transfer, Premium tier, 9,095 TiB to N. America $745,379.72  (= $0.080 per GiB)
+STORAGE                                                        $5,309,319.69
+  Standard, 139,698,386 GiB                                      $2,793,967.62 (= $0.020 per GiB)
+    Class A operations, 10,000 million (calculator maximum)      $49,999.98   (= $0.005 per 1,000)
+    Class B operations, 10,000 million (calculator maximum)      $3,999.98    (= $0.0004 per 1,000)
+  Nearline, 186,264,515 GiB                                      $1,862,645.15 (= $0.010 per GiB)
+    Retrieval, 1,596,516 GiB                                     $15,965.16   (= $0.01 per GiB)
+  Coldline, 139,698,386 GiB                                      $558,793.54  (= $0.004 per GiB)
+    Retrieval, 1,197,413 GiB                                     $23,948.26   (= $0.02 per GiB)
+
+Total estimated cost                                           $6,098,527.22 per month ($73.18M a year)
+
+Operations are capped at 10,000 million per line in the calculator. The workload needs 15,000 million
+Class A and 150,000 million Class B, so the full request bill is 15,000 x $5 + 150,000 x $0.40 = $135,000
+(not $54,000). Full-workload total: $6,098,527 - $54,000 + $135,000 = $6,179,527 a month.
