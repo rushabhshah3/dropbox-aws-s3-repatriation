@@ -1,0 +1,86 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench (app dashboard) · theme: Coral
+ * tone: technical, restrained · anchor hue: coral 39° · enrichment: none (data is the imagery)
+ * nav: N3 side-rail · footer: Ft2 inline single line
+ * studied: yes · DNA-source: image + video (user references: light dashboard, segmented bars, orange accent)
+ */
+:root {
+  /* paper and surfaces */
+  --color-paper: oklch(97.6% 0.004 75);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-2: oklch(98.4% 0.003 75);
+  --color-sunken: oklch(95.4% 0.005 75);
+  --color-line: oklch(91.5% 0.006 75);
+  --color-line-strong: oklch(85% 0.008 75);
+
+  /* ink */
+  --color-ink: oklch(21% 0.01 60);
+  --color-ink-2: oklch(42% 0.012 60);
+  --color-ink-3: oklch(58% 0.01 60);
+  --color-ink-4: oklch(72% 0.008 60);
+  --color-on-ink: oklch(99% 0 0);
+
+  /* one accent: coral, reserved for on-prem and the break-even point */
+  --color-accent: oklch(65% 0.19 39);
+  --color-accent-strong: oklch(58% 0.19 37);
+  --color-accent-soft: oklch(95% 0.035 45);
+  --color-focus: oklch(55% 0.19 39);
+
+  /* meaning */
+  --color-good: oklch(55% 0.13 152);
+  --color-good-soft: oklch(95% 0.04 152);
+  --color-bad: oklch(55% 0.17 25);
+  --color-bad-soft: oklch(95% 0.035 25);
+
+  /* chart series */
+  --color-aws: oklch(26% 0.012 60);
+  --color-gcp: oklch(62% 0.01 60);
+  --color-onprem: var(--color-accent);
+
+  /* breakdown ramp (neutral, warmest = largest share) */
+  --ramp-1: oklch(65% 0.19 39);
+  --ramp-2: oklch(30% 0.012 60);
+  --ramp-3: oklch(46% 0.012 60);
+  --ramp-4: oklch(60% 0.01 60);
+  --ramp-5: oklch(73% 0.008 60);
+  --ramp-6: oklch(84% 0.006 60);
+
+  /* type */
+  --font-display: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.875rem;
+  --text-2xl: clamp(1.875rem, 2.4vw + 0.9rem, 2.75rem);
+
+  /* 4pt spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --rule: 1px solid var(--color-line);
+  --shadow-card: 0 1px 2px oklch(21% 0.01 60 / 0.04);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 700ms;
+}
