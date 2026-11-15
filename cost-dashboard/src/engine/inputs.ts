@@ -92,6 +92,21 @@ export const PRESETS: Preset[] = [
     note: '500 PB · 2015 prices',
     patch: { priceYear: '2015', driveTB: 8, drivePerTB: 45, wattsPerTB: 1.0, drivesPerServer: 90 },
   },
+  {
+    id: 'dropbox2026',
+    label: 'Dropbox 7th-Gen',
+    note: '500 PB · 32 TB SMR',
+    patch: {
+      driveTB: 32,
+      drivePerTB: 28,
+      wattsPerTB: 0.30,
+      drivesPerServer: 100,
+      serverCost: 14_000,
+      rackCost: 25_000,
+      redundancy: 2.2,
+      priceYear: '2026',
+    },
+  },
 ];
 
 export function withPreset(id: string): Inputs {
