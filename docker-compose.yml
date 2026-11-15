@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  pocket-ledger:
+    build:
+      context: ./cost-dashboard
+      dockerfile: Dockerfile
+    container_name: pocket-ledger
+    ports:
+      - "8080:80"
+    restart: unless-stopped
