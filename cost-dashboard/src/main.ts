@@ -120,7 +120,9 @@ mountControls($('#panel'));
 const drawBreakEven = breakEvenChart($('#chart-breakeven'));
 const drawTimeline = timelineChart($('#chart-timeline'));
 
-function cloudName(s: Summary) { return s.cheapestCloud === 'aws' ? 'AWS S3' : 'Google Cloud'; }
+function cloudName(s: Summary) {
+  return s.cheapestCloud === 'aws' ? 'AWS S3' : s.cheapestCloud === 'gcp' ? 'Google Cloud' : 'Azure Blob';
+}
 
 function renderTicker(i: Inputs) {
   const p = prices(i);
@@ -149,7 +151,9 @@ function renderOverview(i: Inputs, s: Summary) {
   const save = s.horizon.saving;
   const own = s.onprem.total;
   const past = s.breakEvenTB ? i.storedTB / s.breakEvenTB : 0;
-  const cloudSpend = s.rows.length ? s.rows[s.rows.length - 1][s.cheapestCloud === 'aws' ? 'awsCum' : 'gcpCum'] : 0;
+  const cloudSpend = s.rows.length
+    ? s.rows[s.rows.length - 1][s.cheapestCloud === 'aws' ? 'awsCum' : s.cheapestCloud === 'gcp' ? 'gcpCum' : 'azureCum']
+    : 0;
   const st = $('#status');
   st.className = `status ${diff > 0 ? 'status-good' : 'status-bad'}`;
   st.textContent = diff > 0 ? 'Build your own' : 'Stay in the cloud';

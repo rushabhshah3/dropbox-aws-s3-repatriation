@@ -17,7 +17,7 @@ export interface CloudPrices {
 
 const TB = 1000; // GB per TB (decimal, as providers bill)
 
-export interface PriceSet { year: '2026' | '2015'; aws: CloudPrices; gcp: CloudPrices }
+export interface PriceSet { year: '2026' | '2015'; aws: CloudPrices; gcp: CloudPrices; azure: CloudPrices }
 
 export const PRICES_2026: PriceSet = {
   year: '2026',
@@ -56,6 +56,26 @@ export const PRICES_2026: PriceSet = {
       { upToGB: Infinity, price: 0.08 },
     ],
   },
+  azure: {
+    name: 'Azure Blob',
+    hotTiers: [
+      { upToGB: 50 * TB, price: 0.018 },
+      { upToGB: 500 * TB, price: 0.0173 },
+      { upToGB: Infinity, price: 0.0166 },
+    ],
+    warm: 0.010,
+    cold: 0.002,
+    writePer1k: 0.005,
+    readPer1k: 0.0004,
+    warmRetrieval: 0.01,
+    coldRetrieval: 0.02,
+    egressTiers: [
+      { upToGB: 10 * TB, price: 0.087 },
+      { upToGB: 50 * TB, price: 0.083 },
+      { upToGB: 150 * TB, price: 0.07 },
+      { upToGB: Infinity, price: 0.05 },
+    ],
+  },
 };
 
 // Archived 2015 list prices (S3 Standard tiered $0.030 down to $0.0275/GB at scale;
@@ -90,6 +110,12 @@ export const PRICES_2015: PriceSet = {
       { upToGB: 10 * TB, price: 0.11 },
       { upToGB: Infinity, price: 0.08 },
     ],
+  },
+  azure: {
+    ...PRICES_2026.azure,
+    hotTiers: [{ upToGB: Infinity, price: 0.024 }],
+    warm: 0.012,
+    cold: 0.005,
   },
 };
 

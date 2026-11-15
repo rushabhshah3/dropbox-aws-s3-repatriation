@@ -5,7 +5,7 @@ import { CloudPrices, PRICES_2015, PRICES_2026, tiered } from './prices';
 const GB_PER_TB = 1000;
 const HOURS_PER_MONTH = 730;
 
-export type CloudKey = 'aws' | 'gcp';
+export type CloudKey = 'aws' | 'gcp' | 'azure';
 
 export interface CloudBill {
   storage: number; requests: number; retrieval: number; egress: number;
@@ -88,7 +88,7 @@ export function onPremBill(tb: number, i: Inputs): OnPremBill {
   return { drives, servers, racks, ...run, build, total };
 }
 
-export interface ScalePoint { tb: number; aws: number; gcp: number; onprem: number }
+export interface ScalePoint { tb: number; aws: number; gcp: number; azure: number; onprem: number }
 
 /** Monthly cost of each option across a log range of scales. */
 export function scaleCurve(i: Inputs, fromTB = 1, toTB = 2_000_000, steps = 120): ScalePoint[] {
@@ -97,7 +97,13 @@ export function scaleCurve(i: Inputs, fromTB = 1, toTB = 2_000_000, steps = 120)
   const a = Math.log10(fromTB), b = Math.log10(toTB);
   for (let k = 0; k <= steps; k++) {
     const tb = 10 ** (a + ((b - a) * k) / steps);
-    out.push({ tb, aws: cloudBill(tb, i, ps.aws).total, gcp: cloudBill(tb, i, ps.gcp).total, onprem: onPremBill(tb, i).total });
+    out.push({
+      tb,
+      aws: cloudBill(tb, i, ps.aws).total,
+      gcp: cloudBill(tb, i, ps.gcp).total,
+      azure: cloudBill(tb, i, ps.azure).total,
+      onprem: onPremBill(tb, i).total,
+    });
   }
   return out;
 }
@@ -105,7 +111,9 @@ export function scaleCurve(i: Inputs, fromTB = 1, toTB = 2_000_000, steps = 120)
 /** Smallest usable TB at which on-prem is cheaper than the cheaper cloud. null if never within range. */
 export function breakEvenTB(i: Inputs, toTB = 2_000_000): number | null {
   const ps = prices(i);
-  const gap = (tb: number) => onPremBill(tb, i).total - Math.min(cloudBill(tb, i, ps.aws).total, cloudBill(tb, i, ps.gcp).total);
+  const gap = (tb: number) =>
+    onPremBill(tb, i).total -
+    Math.min(cloudBill(tb, i, ps.aws).total, cloudBill(tb, i, ps.gcp).total, cloudBill(tb, i, ps.azure).total);
   // find first sign change on a log grid, then bisect
   let lo = 1, prevGap = gap(lo);
   if (prevGap < 0) return lo;
@@ -127,8 +135,8 @@ export function breakEvenTB(i: Inputs, toTB = 2_000_000): number | null {
 
 export interface MonthRow {
   month: number; tb: number;
-  aws: number; gcp: number; onprem: number;            // spend in that month (cash)
-  awsCum: number; gcpCum: number; onpremCum: number;
+  aws: number; gcp: number; azure: number; onprem: number;            // spend in that month (cash)
+  awsCum: number; gcpCum: number; azureCum: number; onpremCum: number;
   hardwareBought: number;                               // capex spent this month
   installedRawTB: number;
 }
@@ -138,7 +146,7 @@ export function timeline(i: Inputs): MonthRow[] {
   const ps = prices(i);
   const g = i.growthPct / 100;
   const rows: MonthRow[] = [];
-  let awsCum = 0, gcpCum = 0, onpremCum = 0;
+  let awsCum = 0, gcpCum = 0, azureCum = 0, onpremCum = 0;
   let installed: ReturnType<typeof fleetFor> | null = null;
 
   // one-time costs before month 0
@@ -159,15 +167,16 @@ export function timeline(i: Inputs): MonthRow[] {
     const onprem = bought + run.colocation + run.energy + run.replacement + run.bandwidth + run.staff;
     const aws = cloudBill(tb, i, ps.aws).total;
     const gcp = cloudBill(tb, i, ps.gcp).total;
-    awsCum += aws; gcpCum += gcp; onpremCum += onprem;
-    rows.push({ month: m, tb, aws, gcp, onprem, awsCum, gcpCum, onpremCum, hardwareBought: bought, installedRawTB: installed.rawTB });
+    const azure = cloudBill(tb, i, ps.azure).total;
+    awsCum += aws; gcpCum += gcp; azureCum += azure; onpremCum += onprem;
+    rows.push({ month: m, tb, aws, gcp, azure, onprem, awsCum, gcpCum, azureCum, onpremCum, hardwareBought: bought, installedRawTB: installed.rawTB });
   }
   return rows;
 }
 
 /** First month at which cumulative on-prem spend is below the cheaper cloud's. null if not within horizon. */
 export function paybackMonth(rows: MonthRow[]): number | null {
-  for (const r of rows) if (r.onpremCum < Math.min(r.awsCum, r.gcpCum)) return r.month;
+  for (const r of rows) if (r.onpremCum < Math.min(r.awsCum, r.gcpCum, r.azureCum)) return r.month;
   return null;
 }
 
@@ -178,17 +187,26 @@ export interface Summary {
   onprem: OnPremBill;
   fleet: Fleet;
   cheapestCloud: CloudKey;
-  horizon: { aws: number; gcp: number; onprem: number; saving: number };
+  horizon: { aws: number; gcp: number; azure: number; onprem: number; saving: number };
   rows: MonthRow[];
 }
 
 export function summarise(i: Inputs): Summary {
   const ps = prices(i);
-  const cloud = { aws: cloudBill(i.storedTB, i, ps.aws), gcp: cloudBill(i.storedTB, i, ps.gcp) };
-  const cheapestCloud: CloudKey = cloud.aws.total <= cloud.gcp.total ? 'aws' : 'gcp';
+  const cloud = {
+    aws: cloudBill(i.storedTB, i, ps.aws),
+    gcp: cloudBill(i.storedTB, i, ps.gcp),
+    azure: cloudBill(i.storedTB, i, ps.azure),
+  };
+  const cheapestCloud: CloudKey =
+    cloud.aws.total <= cloud.gcp.total && cloud.aws.total <= cloud.azure.total
+      ? 'aws'
+      : cloud.gcp.total <= cloud.azure.total
+      ? 'gcp'
+      : 'azure';
   const rows = timeline(i);
   const last = rows[rows.length - 1];
-  const bestCloudCum = Math.min(last.awsCum, last.gcpCum);
+  const bestCloudCum = Math.min(last.awsCum, last.gcpCum, last.azureCum);
   return {
     breakEvenTB: breakEvenTB(i),
     payback: paybackMonth(rows),
@@ -196,7 +214,13 @@ export function summarise(i: Inputs): Summary {
     onprem: onPremBill(i.storedTB, i),
     fleet: fleetFor(i.storedTB, i),
     cheapestCloud,
-    horizon: { aws: last.awsCum, gcp: last.gcpCum, onprem: last.onpremCum, saving: bestCloudCum - last.onpremCum },
+    horizon: {
+      aws: last.awsCum,
+      gcp: last.gcpCum,
+      azure: last.azureCum,
+      onprem: last.onpremCum,
+      saving: bestCloudCum - last.onpremCum,
+    },
     rows,
   };
 }
