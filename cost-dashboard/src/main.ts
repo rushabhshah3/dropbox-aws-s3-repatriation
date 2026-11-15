@@ -42,6 +42,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       ${NAV.map((g) => `<p class="rail-group">${g.group}</p><ul>${g.items.map((i) => `<li><a href="#${i.id}" data-nav="${i.id}">${icon(i.icon)}<span>${i.label}</span></a></li>`).join('')}</ul>`).join('')}
     </nav>
     <div class="rail-foot">
+      <button id="btn-export-csv" type="button" class="btn-export" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:8px;padding:6px 10px;font-size:12px;font-family:inherit;font-weight:500;color:var(--color-ink);background:var(--color-sunken);border:1px solid var(--color-ink-4, #ddd);border-radius:4px;cursor:pointer;">
+        ${icon('timeline', 16)}<span>Export Timeline CSV</span>
+      </button>
       <a href="${REPO}/model.md" target="_blank" rel="noopener">${icon('info', 16)}<span>Model notes</span></a>
       <a href="${REPO}/assumptions.md" target="_blank" rel="noopener">${icon('external', 16)}<span>Sources</span></a>
       <p>IT457 Cloud Computing · Week 3</p>
@@ -314,3 +317,35 @@ document.querySelectorAll('.sec').forEach((s) => spy.observe(s));
 
 // staggered first reveal
 document.documentElement.classList.add('ready');
+
+// CSV export handler
+document.querySelector('#btn-export-csv')?.addEventListener('click', () => {
+  const current = state.get();
+  const s = summarise(current);
+  const rows = [
+    'Month,Usable_TB,AWS_Monthly,GCP_Monthly,Azure_Monthly,OnPrem_Monthly,AWS_Cum,GCP_Cum,Azure_Cum,OnPrem_Cum,Hardware_Bought,Installed_Raw_TB',
+    ...s.rows.map((r) =>
+      [
+        r.month,
+        r.tb.toFixed(1),
+        r.aws.toFixed(2),
+        r.gcp.toFixed(2),
+        r.azure.toFixed(2),
+        r.onprem.toFixed(2),
+        r.awsCum.toFixed(2),
+        r.gcpCum.toFixed(2),
+        r.azureCum.toFixed(2),
+        r.onpremCum.toFixed(2),
+        r.hardwareBought.toFixed(2),
+        r.installedRawTB.toFixed(1),
+      ].join(',')
+    ),
+  ].join('\n');
+  const blob = new Blob([rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pocket-ledger-timeline-${current.storedTB}TB.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
