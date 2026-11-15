@@ -8,31 +8,38 @@ const HOURS_PER_MONTH = 730;
 export type CloudKey = 'aws' | 'gcp';
 
 export interface CloudBill {
-  storage: number; requests: number; retrieval: number; egress: number;
+  storage: number; requests: number; retrieval: number; egress: number; compute: number;
   discount: number; total: number;
 }
 
 export interface OnPremBill {
   drives: number; servers: number; racks: number;   // amortised hardware
+  compute: number;                                   // amortised compute servers
   colocation: number; energy: number; replacement: number;
   bandwidth: number; staff: number; build: number;
   total: number;
 }
 
-export interface Fleet { rawTB: number; drives: number; servers: number; racks: number; kW: number; fte: number; capex: number }
+export interface Fleet {
+  rawTB: number; drives: number; servers: number;   // servers = storage servers
+  computeServers: number; racks: number; kW: number; fte: number; capex: number;
+}
 
 export const prices = (i: Inputs) => (i.priceYear === '2015' ? PRICES_2015 : PRICES_2026);
 
-/** Monthly cloud bill for `tb` of usable data. */
+/** Monthly cloud bill for `tb` of usable data plus the fixed compute fleet. */
 export function cloudBill(tb: number, i: Inputs, p: CloudPrices): CloudBill {
-  const gb = tb * GB_PER_TB;
+  // storage and transfer are priced in the provider's billing unit (GB for AWS, GiB for Google);
+  // request counts depend on bytes written, not on the billing unit
+  const gbDecimal = tb * GB_PER_TB;
+  const gb = gbDecimal / p.unitGB;
   const hot = i.hotPct / 100;
   const warm = i.warmPct / 100;
   const cold = Math.max(0, 1 - hot - warm);
 
   const storage = tiered(gb * hot, p.hotTiers) + gb * warm * p.warm + gb * cold * p.cold;
 
-  const writtenGB = gb * (i.growthPct / 100);
+  const writtenGB = gbDecimal * (i.growthPct / 100);
   const writes = (writtenGB * 1000) / i.avgObjectMB;
   const reads = writes * i.readWrite;
   const requests = (writes / 1000) * p.writePer1k + (reads / 1000) * p.readPer1k;
@@ -43,10 +50,11 @@ export function cloudBill(tb: number, i: Inputs, p: CloudPrices): CloudBill {
   const retrieval = fromCold * warmShareOfNonHot * p.warmRetrieval + fromCold * (1 - warmShareOfNonHot) * p.coldRetrieval;
 
   const egress = tiered(readOutGB, p.egressTiers);
+  const compute = i.computeServers * HOURS_PER_MONTH * p.computeHr;
 
-  const gross = storage + requests + retrieval + egress;
+  const gross = storage + requests + retrieval + egress + compute;
   const discount = gross * (i.discountPct / 100);
-  return { storage, requests, retrieval, egress, discount, total: gross - discount };
+  return { storage, requests, retrieval, egress, compute, discount, total: gross - discount };
 }
 
 /** Hardware needed to hold `tb` of usable data. */
@@ -54,11 +62,12 @@ export function fleetFor(tb: number, i: Inputs): Fleet {
   const rawTB = (tb * i.redundancy) / (i.fillPct / 100);
   const drives = Math.max(1, Math.ceil(rawTB / i.driveTB));
   const servers = Math.max(1, Math.ceil(drives / i.drivesPerServer));
-  const racks = Math.max(1, Math.ceil(servers / i.serversPerRack));
-  const kW = (drives * i.driveTB * i.wattsPerTB + servers * i.serverWatts) / 1000;
+  const computeServers = Math.max(0, Math.round(i.computeServers));
+  const racks = Math.max(1, Math.ceil(servers / i.serversPerRack)) + Math.ceil(computeServers / i.computePerRack);
+  const kW = (drives * i.driveTB * i.wattsPerTB + servers * i.serverWatts + computeServers * i.computeWatts) / 1000;
   const fte = i.baseFTE + rawTB / 1000 / i.pbPerFTE;
-  const capex = drives * i.driveTB * i.drivePerTB + servers * i.serverCost + racks * i.rackCost;
-  return { rawTB, drives, servers, racks, kW, fte, capex };
+  const capex = drives * i.driveTB * i.drivePerTB + servers * i.serverCost + computeServers * i.computeServerCost + racks * i.rackCost;
+  return { rawTB, drives, servers, computeServers, racks, kW, fte, capex };
 }
 
 /** Monthly cost of running a given fleet (excludes hardware and build). */
@@ -82,10 +91,11 @@ export function onPremBill(tb: number, i: Inputs): OnPremBill {
   const drives = (f.drives * i.driveTB * i.drivePerTB) / months;
   const servers = (f.servers * i.serverCost) / months;
   const racks = (f.racks * i.rackCost) / months;
+  const compute = (f.computeServers * i.computeServerCost) / months;
   const run = runningCost(f, tb, i);
   const build = buildCost(i) / i.horizonMonths;
-  const total = drives + servers + racks + run.colocation + run.energy + run.replacement + run.bandwidth + run.staff + build;
-  return { drives, servers, racks, ...run, build, total };
+  const total = drives + servers + racks + compute + run.colocation + run.energy + run.replacement + run.bandwidth + run.staff + build;
+  return { drives, servers, racks, compute, ...run, build, total };
 }
 
 export interface ScalePoint { tb: number; aws: number; gcp: number; onprem: number }
@@ -213,7 +223,25 @@ const SENS: { key: keyof Inputs; label: string; low: number; high: number }[] = 
   { key: 'pbPerFTE', label: 'Raw PB per engineer', low: 40, high: 250 },
   { key: 'hotPct', label: 'Hot data share, %', low: 10, high: 60 },
   { key: 'growthPct', label: 'Monthly growth, %', low: 1, high: 5 },
+  { key: 'computeServers', label: 'Compute servers', low: 0, high: 500 },
 ];
+
+/**
+ * Straight-line fit of each option's monthly cost at large scale: cost ≈ fixed + perTB × TB.
+ * Used to explain the break-even formula S* = (fixed own − fixed cloud) / (cloud $/TB − own $/TB).
+ */
+export function linearFit(i: Inputs, atTB: number) {
+  const ps = prices(i);
+  const cloudAt = (tb: number) => Math.min(cloudBill(tb, i, ps.aws).total, cloudBill(tb, i, ps.gcp).total);
+  const ownAt = (tb: number) => onPremBill(tb, i).total;
+  const a = atTB, b = atTB * 2;
+  const cloudPerTB = (cloudAt(b) - cloudAt(a)) / (b - a);
+  const ownPerTB = (ownAt(b) - ownAt(a)) / (b - a);
+  const cloudFixed = cloudAt(a) - cloudPerTB * a;
+  const ownFixed = ownAt(a) - ownPerTB * a;
+  const estimate = cloudPerTB > ownPerTB ? (ownFixed - cloudFixed) / (cloudPerTB - ownPerTB) : null;
+  return { cloudPerTB, ownPerTB, cloudFixed, ownFixed, estimate };
+}
 
 /** One-at-a-time sensitivity of the horizon saving. Sorted by spread, largest first. */
 export function sensitivity(i: Inputs): SensitivityRow[] {

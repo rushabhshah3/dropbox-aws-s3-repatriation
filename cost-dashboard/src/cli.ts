@@ -28,14 +28,15 @@ console.log(`Presets available: ${PRESETS.map((p) => p.id).join(', ')}\n`);
 
 console.log('Monthly cost at month 0');
 const pad = (t: string, n = 14) => t.padStart(n);
-console.log(['', 'AWS S3', 'Google Cloud', 'On-prem'].map((t, k) => (k ? pad(t) : t.padEnd(14))).join(''));
+console.log(['', 'AWS', 'Google Cloud', 'On-prem'].map((t, k) => (k ? pad(t) : t.padEnd(14))).join(''));
 const line = (label: string, a: number, g: number, o: number | string) =>
   console.log(label.padEnd(14) + pad($(a)) + pad($(g)) + pad(typeof o === 'number' ? $(o) : o));
 line('Total', s.cloud.aws.total, s.cloud.gcp.total, s.onprem.total);
 line('  storage', s.cloud.aws.storage, s.cloud.gcp.storage, '');
 line('  egress', s.cloud.aws.egress, s.cloud.gcp.egress, '');
+line('  compute', s.cloud.aws.compute, s.cloud.gcp.compute, s.onprem.compute);
 
-console.log(`\nFleet: ${s.fleet.drives.toLocaleString()} drives, ${s.fleet.servers} servers, ${s.fleet.racks} racks, ${s.fleet.kW.toFixed(0)} kW, ${s.fleet.fte.toFixed(1)} FTE, capex ${$(s.fleet.capex)}`);
+console.log(`\nFleet: ${s.fleet.drives.toLocaleString()} drives, ${s.fleet.servers} storage servers, ${s.fleet.computeServers} compute servers, ${s.fleet.racks} racks, ${s.fleet.kW.toFixed(0)} kW, ${s.fleet.fte.toFixed(1)} FTE, capex ${$(s.fleet.capex)}`);
 console.log(`\nBreak-even scale: ${s.breakEvenTB ? size(s.breakEvenTB) : 'not reached below 2 EB'}`);
 console.log(`Payback (cumulative): ${s.payback === null ? 'not within horizon' : `month ${s.payback}`}`);
 console.log(`${inputs.horizonMonths}-month total: AWS ${$(s.horizon.aws)}, GCP ${$(s.horizon.gcp)}, on-prem ${$(s.horizon.onprem)}, saving ${$(s.horizon.saving)}`);

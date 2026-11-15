@@ -12,10 +12,14 @@ export interface CloudPrices {
   readPer1k: number;      // $/1,000 read ops
   warmRetrieval: number;  // $/GB read back
   coldRetrieval: number;  // $/GB read back
-  egressTiers: Tier[];    // $/GB leaving to the internet, monthly volume tiers
+  egressTiers: Tier[];    // $/unit leaving to the internet, monthly volume tiers
+  unitGB: number;         // GB per billing unit: 1 for AWS (GB), 1.073741824 for Google (GiB)
+  computeHr: number;      // $/hour, one 32-vCPU compute instance, on-demand Linux
+  computeType: string;
 }
 
-const TB = 1000; // GB per TB (decimal, as providers bill)
+const TB = 1000; // GB per TB (decimal, as AWS bills)
+const TiB = 1024; // GiB per TiB (binary, as Google bills)
 
 export interface PriceSet { year: '2026' | '2015'; aws: CloudPrices; gcp: CloudPrices }
 
@@ -40,6 +44,9 @@ export const PRICES_2026: PriceSet = {
       { upToGB: 150 * TB, price: 0.07 },
       { upToGB: Infinity, price: 0.05 },
     ],
+    unitGB: 1,
+    computeHr: 1.428,          // c7i.8xlarge, us-east-1, AWS Pricing Calculator Nov 2026
+    computeType: 'c7i.8xlarge',
   },
   gcp: {
     name: 'Google Cloud',
@@ -50,11 +57,15 @@ export const PRICES_2026: PriceSet = {
     readPer1k: 0.0004,
     warmRetrieval: 0.01,
     coldRetrieval: 0.02,
+    // tier bounds and prices are per GiB, as the Google Cloud calculator bills them
     egressTiers: [
-      { upToGB: 1 * TB, price: 0.12 },
-      { upToGB: 10 * TB, price: 0.11 },
+      { upToGB: 1 * TiB, price: 0.12 },
+      { upToGB: 10 * TiB, price: 0.11 },
       { upToGB: Infinity, price: 0.08 },
     ],
+    unitGB: 1.073741824,
+    computeHr: 1.1994,         // c2d-highcpu-32, us-central1, Google Cloud calculator Nov 2026
+    computeType: 'c2d-highcpu-32',
   },
 };
 
@@ -71,8 +82,10 @@ export const PRICES_2015: PriceSet = {
       { upToGB: Infinity, price: 0.0275 },
     ],
     cold: 0.007,
+    computeHr: 1.591,          // c4.8xlarge (36 vCPU), 2015 on-demand
+    computeType: 'c4.8xlarge',
   },
-  gcp: { ...PRICES_2026.gcp, hotTiers: [{ upToGB: Infinity, price: 0.026 }], warm: 0.01, cold: 0.007 },
+  gcp: { ...PRICES_2026.gcp, hotTiers: [{ upToGB: Infinity, price: 0.026 }], warm: 0.01, cold: 0.007, computeHr: 1.216, computeType: 'n1-highcpu-32' },
 };
 
 /** Cost of `gb` under a volume-tiered price list. */
