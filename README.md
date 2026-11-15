@@ -6,9 +6,19 @@ Team: 202611054, 202611032, 202611009.
 Between 2013 and 2016 Dropbox moved more than 90% of its user files, roughly 600 PB, off
 Amazon S3 and onto **Magic Pocket**, a blob store it designed, wrote and runs in leased
 co-location space. This repo holds our research notes, the weekly deliverables, and later the
-cost model we build to test whether that decision holds up.
+cost model we built to test whether that decision holds up.
 
-**Week 1 brief:** [docs/week1/IT457_Week1_MagicPocket_Brief.pdf](docs/week1/IT457_Week1_MagicPocket_Brief.pdf)
+## Start here
+
+| If you want to... | Open |
+| :--- | :--- |
+| Read the Week 1 brief (sources and salient points) | [docs/week1/IT457_Week1_MagicPocket_Brief.pdf](docs/week1/IT457_Week1_MagicPocket_Brief.pdf) |
+| Read the Week 2 case analysis report | [docs/Week2/IT457_Week2_Report_Dropbox_MagicPocket.docx.pdf](docs/Week2/IT457_Week2_Report_Dropbox_MagicPocket.docx.pdf) |
+| Read the Week 3 results addendum | [docs/Week3/IT457_Week3_Addendum_Dropbox_MagicPocket.pdf](docs/Week3/IT457_Week3_Addendum_Dropbox_MagicPocket.pdf) |
+| Play with the cost model | [cost-dashboard/](cost-dashboard/) (`npm install && npm run dev`) |
+| Check how the model works, formula by formula | [docs/Week3/model.md](docs/Week3/model.md) |
+| See where every price comes from | [docs/Week3/assumptions.md](docs/Week3/assumptions.md) |
+| Understand Magic Pocket itself | [docs/architecture.md](docs/architecture.md) |
 
 ## The case in five numbers
 
@@ -70,6 +80,100 @@ flowchart LR
 More detail, including the write path and the hardware generations, is in
 [docs/architecture.md](docs/architecture.md).
 
+## Week 3: the cost model (Pocket Ledger)
+
+![Pocket Ledger dashboard, reference scenario](docs/Week3/img/dashboard.png)
+
+Pocket Ledger is an interactive rent-vs-buy model for Dropbox's workload. It prices the same
+storage on **AWS S3**, **Google Cloud Storage** and a **Magic Pocket-style fleet of our own**,
+then answers three questions:
+
+1. **At what size does owning beat renting?** The break-even scale, where the monthly cost
+   curves cross.
+2. **When does the investment pay back?** A month-by-month cash simulation with 3% monthly growth,
+   an up-front build team, and hardware bought ahead of demand.
+3. **How sure are we?** A one-at-a-time sensitivity analysis on nine inputs, plus a check against
+   the savings Dropbox reported in its S-1.
+
+### Results for the reference workload (500 PB, +3% a month, 2026 list prices)
+
+| | AWS S3 | Google Cloud | Own fleet |
+| :--- | ---: | ---: | ---: |
+| Monthly cost, month 0 | $6.95M | $6.58M | $1.82M |
+| 36-month total | $439M | $416M | $208M |
+
+- **Break-even scale: about 18 PB.** Below that, the fixed cost of a storage team and a 2.5-year
+  build is larger than what the cloud charges. Above it, owning gets cheaper with every terabyte.
+- **Payback: month 12.** Over 36 months, owning saves about **$208M** against the cheaper cloud.
+- **Biggest levers:** share of hot data, negotiated cloud discount, redundancy factor, egress and
+  drive price. A 50% cloud discount alone cuts the saving to about $42M.
+- **Fleet at month 0:** 62,500 drives of 24 TB, 625 servers, 79 racks, 788 kW, 19 engineers,
+  $54M of hardware.
+- **S-1 check:** at 2015-era prices the model puts S3 for 500 PB at roughly $100M a year,
+  against the $92.5M drop in cloud spend Dropbox reported for 2016. The orders of magnitude agree.
+
+The addendum PDF assumes no egress. To reproduce it in the dashboard, set
+*Read out per month* to 0%.
+
+### How the model works
+
+```mermaid
+flowchart LR
+    subgraph IN[Inputs]
+        W[Workload<br/>size, growth, hot/warm/cold, egress]
+        P[Price lists<br/>AWS + GCP, 2026 or 2015]
+        H[Hardware<br/>drives, servers, racks, redundancy]
+        F[Facilities and people<br/>colocation, power, staff, build team]
+    end
+
+    W --> CB[Cloud bill<br/>tiered storage + requests<br/>+ retrieval + egress − discount]
+    P --> CB
+    W --> FL[Fleet sizing<br/>usable TB × redundancy ÷ fill<br/>→ drives → servers → racks → kW]
+    H --> FL
+    FL --> OB[On-prem bill<br/>amortised hardware + colocation<br/>+ energy + staff + drive swaps]
+    F --> OB
+
+    CB --> BE[Break-even scale<br/>S* = fixed ÷ cloud $/TB − own $/TB]
+    OB --> BE
+    CB --> TL[36-month timeline<br/>cumulative cash, payback month]
+    OB --> TL
+    TL --> SE[Sensitivity<br/>9 inputs, low → high]
+    TL --> S1[S-1 reality check]
+```
+
+Every formula, with a worked example, is in [docs/Week3/model.md](docs/Week3/model.md).
+
+### How the code is built
+
+One cost engine, written as pure TypeScript functions with no UI code, is shared by a
+command-line calculator and the web dashboard, so both always give the same numbers.
+
+```mermaid
+flowchart TB
+    subgraph ENGINE["src/engine/ (pure functions, no DOM)"]
+        PR[prices.ts<br/>AWS and GCP rate cards]
+        INP[inputs.ts<br/>defaults + presets]
+        MOD[model.ts<br/>cloudBill · fleetFor · onPremBill<br/>breakEvenTB · timeline · sensitivity]
+        CHK[check.ts<br/>hand-calculation tests]
+        PR --> MOD
+        INP --> MOD
+        MOD --> CHK
+    end
+
+    MOD --> CLI[src/cli.ts<br/>npm run calc]
+    MOD --> UI
+
+    subgraph UI["src/ui/ + main.ts (dashboard)"]
+        ST[state.ts<br/>scenario ⇄ URL]
+        CT[controls.ts<br/>sliders, presets]
+        CH[charts/<br/>break-even · timeline · tornado, D3]
+        CT --> ST --> CH
+    end
+```
+
+The dashboard keeps the whole scenario in the URL, so a configuration can be bookmarked or sent
+to someone and it opens exactly as it was.
+
 ## Migration timeline
 
 | When | What |
@@ -87,30 +191,56 @@ Full timeline up to 2026: [docs/timeline.md](docs/timeline.md).
 
 | Week | Work | Deliverable | Status |
 | :--- | :--- | :--- | :--- |
-| 1 | Find primary sources; extract architecture, cost and outcome data | Summary of sources and salient points | Done |
-| 2 | Case analysis: architecture, problem, solution | 10-page report, exercise plan, team roles | Next |
-| 3 | Cost and repatriation exercise: price the workload on two cloud providers, build an on-prem TCO, measure replication vs erasure-coding overhead | Results added to the report | |
-| 4 | Final report | Report | |
-| 5 | Viva | | |
+| 1 | Find primary sources; extract architecture, cost and outcome data | [Brief (PDF)](docs/week1/IT457_Week1_MagicPocket_Brief.pdf) | Done |
+| 2 | Case analysis: architecture, problem, solution | [10-page report](docs/Week2/IT457_Week2_Report_Dropbox_MagicPocket.docx.pdf) | Done |
+| 3 | Cost and repatriation exercise: price the workload on two clouds, build an on-prem TCO, break-even and sensitivity | [Addendum](docs/Week3/IT457_Week3_Addendum_Dropbox_MagicPocket.pdf), [spreadsheet](docs/Week3/TCO_model.xlsx), [dashboard](cost-dashboard/) | Done |
+| 4 | Final report | Report | Next |
+| 5 | Viva | Live dashboard demo ([script](docs/Week3/dashboard.md)) | |
 
 ## Repository layout
 
 ```
 .
-├── README.md
+├── README.md                       you are here
 ├── docs/
-│   ├── architecture.md         components, write path, redundancy, hardware
-│   ├── cost-and-outcomes.md    S-1 and 10-K numbers, and the a16z vs Quinn debate
-│   ├── timeline.md             2007 to 2026
-│   ├── sources.md              annotated sources with links
-│   └── week1/
-│       ├── IT457_Week1_MagicPocket_Brief.pdf
-│       ├── IT457_Week1_MagicPocket_Brief.tex
-│       └── draft/              first version of the Week 1 summary
-└── .gitignore
+│   ├── architecture.md             Magic Pocket components, write path, redundancy, hardware
+│   ├── cost-and-outcomes.md        S-1 and 10-K numbers, and the a16z vs Quinn debate
+│   ├── timeline.md                 2007 to 2026
+│   ├── sources.md                  annotated sources with links
+│   ├── week1/                      Week 1 brief (PDF + LaTeX source) and first draft
+│   ├── Week2/                      Week 2 case analysis report and its diagrams
+│   └── Week3/
+│       ├── README.md               what the guide asks for and where we answer it
+│       ├── model.md                the cost model from first principles
+│       ├── assumptions.md          every price and constant, with source and confidence
+│       ├── dashboard.md            what each dashboard section shows, and the viva script
+│       ├── IT457_Week3_Addendum_Dropbox_MagicPocket.pdf
+│       ├── TCO_model.xlsx          line-item spreadsheet behind the addendum
+│       ├── week3_charts.png
+│       └── img/                    dashboard screenshots
+└── cost-dashboard/                 Pocket Ledger: cost engine, CLI and dashboard
+    ├── README.md                   how to run it, and how the code is organised
+    ├── index.html
+    └── src/
+        ├── engine/                 pure cost model (prices, inputs, model, checks)
+        ├── cli.ts                  command-line calculator
+        ├── main.ts                 dashboard page and section renderers
+        └── ui/                     controls, state, charts, icons, styles
 ```
 
-Week 2 and 3 folders will be added as the work starts.
+## Running the dashboard
+
+Needs Node 18 or newer.
+
+```bash
+cd cost-dashboard
+npm install
+npm run dev      # open the URL it prints
+npm run calc     # same model in the terminal
+npm run check    # engine tests
+```
+
+More options are in [cost-dashboard/README.md](cost-dashboard/README.md).
 
 ## Building the Week 1 PDF
 
@@ -133,3 +263,11 @@ tectonic IT457_Week1_MagicPocket_Brief.tex
 - F. Agriel, [QCon SF 2022 talk, InfoQ write-up](https://www.infoq.com/articles/dropbox-magic-pocket-exabyte-storage/) (2023)
 
 All 16 sources, with what we used each one for: [docs/sources.md](docs/sources.md).
+Cost-model prices (AWS, GCP, drives, colocation, power) are sourced separately in
+[docs/Week3/assumptions.md](docs/Week3/assumptions.md).
+
+## Credits
+
+Dashboard icons are from UI Essentials Pro by Pictomate, used under its Standard License. They are
+embedded in [`cost-dashboard/src/ui/icons.ts`](cost-dashboard/src/ui/icons.ts) for this project only
+and are not offered as a reusable icon set. Fonts: Geist and Geist Mono (SIL Open Font License).
