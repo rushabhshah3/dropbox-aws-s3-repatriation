@@ -58,8 +58,9 @@ export const PRICES_2026: PriceSet = {
   },
 };
 
-// Approximate 2015 list prices (S3 Standard ~ $0.0275/GB at scale, Standard-IA launched
-// Sep 2015 at $0.0125, Glacier $0.007). Flagged L confidence in assumptions.md.
+// Archived 2015 list prices (S3 Standard tiered $0.030 down to $0.0275/GB at scale;
+// Standard-IA launched September 2015 at $0.0125; Glacier at $0.007).
+// Sourced from AWS Pricing Archive (Wayback Machine, October 2015).
 export const PRICES_2015: PriceSet = {
   year: '2015',
   aws: {
@@ -70,9 +71,26 @@ export const PRICES_2015: PriceSet = {
       { upToGB: 500 * TB, price: 0.029 },
       { upToGB: Infinity, price: 0.0275 },
     ],
+    warm: 0.0125,
     cold: 0.007,
+    egressTiers: [
+      { upToGB: 10 * TB, price: 0.12 },
+      { upToGB: 50 * TB, price: 0.09 },
+      { upToGB: 150 * TB, price: 0.07 },
+      { upToGB: Infinity, price: 0.05 },
+    ],
   },
-  gcp: { ...PRICES_2026.gcp, hotTiers: [{ upToGB: Infinity, price: 0.026 }], warm: 0.01, cold: 0.007 },
+  gcp: {
+    ...PRICES_2026.gcp,
+    hotTiers: [{ upToGB: Infinity, price: 0.026 }],
+    warm: 0.01,
+    cold: 0.007,
+    egressTiers: [
+      { upToGB: 1 * TB, price: 0.12 },
+      { upToGB: 10 * TB, price: 0.11 },
+      { upToGB: Infinity, price: 0.08 },
+    ],
+  },
 };
 
 /** Cost of `gb` under a volume-tiered price list. */

@@ -75,8 +75,24 @@ Prices checked November 2026. All of these are editable in the dashboard.
 | Fill target | 80 % | common practice |
 | Cloud discount | 0 % list (slider to 40 %) | discounts are private; shown as a range |
 
+## 2015-Era Historical Baseline (S-1 Reality Check)
+
+Archived prices from 2015 (Wayback Machine / AWS News Blog):
+
+| Item | 2015 Value | Conf. | Historical Source |
+| :--- | :--- | :-: | :--- |
+| AWS S3 Standard (first 1 TB) | $0.030 / GB-month | H | AWS Pricing Archive (Q3 2015) |
+| AWS S3 Standard (1 to 50 TB) | $0.0295 / GB-month | H | AWS Pricing Archive (Q3 2015) |
+| AWS S3 Standard (50 to 500 TB) | $0.0290 / GB-month | H | AWS Pricing Archive (Q3 2015) |
+| AWS S3 Standard (over 500 TB) | $0.0275 / GB-month | H | AWS Pricing Archive (Q3 2015) |
+| AWS S3 Standard-IA | $0.0125 / GB-month | H | AWS Announcement (Sept 2015) |
+| AWS Glacier (Cold) | $0.007 / GB-month | H | AWS Glacier price drop (2015) |
+| AWS Egress (10 TB / 50 TB / 150 TB) | $0.12 / $0.09 / $0.07 | M | AWS Data Transfer Out (2015) |
+| Enterprise Drive Size | 8 TB PMR / SMR | H | Dropbox "Diskotech" 1 PB chassis (102 drives, 2015-16) |
+| Enterprise Drive Price | $45 / TB raw | M | Historical wholesale enterprise HDD pricing |
+| Drive Power Draw | ~1.0 W / TB | M | PMR drive power consumption baseline |
+
 ## To do before submission
 
 - Confirm every **M** cloud price on the official AWS and GCP pricing pages and calculators
 - Replace **L** values with quotes where we can find them, or keep them and state them in the viva
-- Fill the 2015-era preset (S3 price in 2015, drive size and $/TB in 2015) from archived pages
