@@ -194,7 +194,7 @@ Full timeline up to 2026: [docs/timeline.md](docs/timeline.md).
 | 1 | Find primary sources; extract architecture, cost and outcome data | [Brief (PDF)](docs/week1/IT457_Week1_MagicPocket_Brief.pdf) | Done |
 | 2 | Case analysis: architecture, problem, solution | [10-page report](docs/Week2/IT457_Week2_Report_Dropbox_MagicPocket.docx.pdf) | Done |
 | 3 | Cost and repatriation exercise: price the workload on two clouds, build an on-prem TCO, break-even and sensitivity | [Addendum](docs/Week3/IT457_Week3_Addendum_Dropbox_MagicPocket.pdf), [spreadsheet](docs/Week3/TCO_model.xlsx), [dashboard](cost-dashboard/) | Done |
-| 4 | Final report | Report | Next |
+| 4 | Final report | [Report Outline](docs/Week4/final_report_outline.md) | Drafted |
 | 5 | Viva | Live dashboard demo ([script](docs/Week3/dashboard.md)) | |
 
 ## Repository layout
