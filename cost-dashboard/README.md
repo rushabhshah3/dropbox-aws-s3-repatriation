@@ -1,7 +1,8 @@
 # Pocket Ledger
 
 An interactive rent-vs-buy cost model for Dropbox's move off AWS S3. It prices the same storage
-on AWS S3, Google Cloud Storage and a Magic Pocket-style fleet of your own, and shows where owning
+on AWS, Google Cloud and a Magic Pocket-style fleet of your own (storage plus a fixed fleet of
+compute servers), and shows where owning
 starts to win, when it pays back, what moves the answer, and how the numbers compare with
 Dropbox's S-1.
 
@@ -30,6 +31,8 @@ npm run preview    # serve the built site
 npm run calc -- --preset startup                    # 50 TB
 npm run calc -- --preset scaleup                    # 5 PB
 npm run calc -- --preset dropbox2015                # 500 PB at 2015-era prices and hardware
+npm run calc -- --preset addendum                   # the Week 3 addendum PDF's assumptions
+npm run calc -- --computeServers 200                # more compute
 npm run calc -- --storedTB 20000 --discountPct 25   # any input by name
 ```
 
@@ -44,10 +47,12 @@ biggest sensitivities and the S-1 comparison.
 | Break-even | Monthly cost against size for all three options (log-log), and the formula S* = fixed ÷ (cloud $/TB − own $/TB) worked through with this scenario's numbers |
 | Three years | Cumulative cash month by month, with hardware purchases and the payback point |
 | Where it goes | Each option's monthly bill split into its parts, on one shared scale |
-| What moves it | Tornado chart: each of nine inputs moved alone from low to high |
-| S-1 check | Model output at 2015 and 2026 prices next to the figures in Dropbox's S-1 |
+| What moves it | Tornado chart: each of ten inputs moved alone from low to high |
+| Calculator check | The reference workload in the official AWS and Google Cloud calculators next to the model, line by line |
+| S-1 check | Model output at 2015 and 2026 prices, storage only, next to the figures in Dropbox's S-1 |
 | Assumptions | Every input with its value, confidence (H/M/L) and source link |
-| Scenario panel | Presets plus every input as a slider; the scenario is saved in the URL |
+| Scenario panel | Five presets (Startup, Scale-up, Reference, Dropbox 2015, Addendum) plus every input as a slider; the scenario is saved in the URL |
+| Theme | Light and dark, following the system; the rail has a toggle |
 
 ## How the code is organised
 
@@ -71,7 +76,7 @@ flowchart LR
 ```
 src/
 ├── engine/                 pure cost model, no DOM; shared by the CLI and the dashboard
-│   ├── prices.ts           AWS and GCP unit prices (2026 list, approximate 2015 list), tiered pricing
+│   ├── prices.ts           AWS and GCP unit prices (2026 from the calculators, approximate 2015), billing units
 │   ├── inputs.ts           every input with its documented default, plus the four presets
 │   ├── model.ts            cloud bill, fleet sizing, on-prem bill, break-even, timeline, sensitivity
 │   └── check.ts            checks against hand calculations (npm run check)

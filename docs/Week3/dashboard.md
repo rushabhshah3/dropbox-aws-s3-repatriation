@@ -14,60 +14,58 @@ They will ask "where does that number come from?" and "what if X were different?
 has to answer both without anyone leaving the page: every figure links to its source, and every
 assumption is a control.
 
-## Structure: an argument you scroll through, with the controls always in reach
+## Structure
 
-The page reads like a short analysis piece (think a financial-press explainer or an annual-report
-section), not a grid of widgets. A sticky control rail on the left holds the workload and price
-inputs; the right side is a sequence of sections that each make one point. Changing any input
-updates every section live.
+A side rail with the sections, a sticky top bar with today's unit prices, the analysis in the
+middle and the scenario panel on the right. Changing any input updates every section live, and
+the scenario is saved in the URL.
 
-Sections, in order:
+| # | Section | The point it makes |
+| :- | :--- | :--- |
+| 1 | **Overview** | Verdict for the current inputs, plus four numbers: break-even size, 36-month saving, payback month, monthly cost today |
+| 2 | **Rent vs buy** | Monthly cost against data stored (log-log) for AWS, Google Cloud and on-prem; the crossing is marked, and the formula S* = net fixed ÷ (cloud $/TB − own $/TB) is worked through underneath |
+| 3 | **Over the horizon** | Cumulative cash month by month with growth; on-prem starts with the build team and buys hardware ahead of need; the payback month is marked |
+| 4 | **Where the money goes** | Each option's monthly bill split into its parts on one shared scale |
+| 5 | **What moves the answer** | Tornado chart: ten inputs, each moved alone from low to high |
+| 6 | **Calculator check** | The reference workload in the official AWS and Google Cloud calculators next to the model; within 0.2 % |
+| 7 | **S-1 check** | The model at 500 PB, storage only, at 2015 and 2026 prices, next to Dropbox's S-1 figures |
+| 8 | **Assumptions** | Every input with its value, confidence (H/M/L) and source |
 
-1. **The question.** One sentence and the headline answer for the current inputs:
-   "Owning becomes cheaper above **x PB**. At 500 PB it saves **$y M a year**." Numbers are live.
-2. **Rent vs buy.** The break-even chart: monthly cost against data stored (log scale), three lines
-   (AWS, GCP, on-prem), the crossing point marked and labelled. This is the main chart.
-3. **Over three years.** Cumulative spend over time with 3 % monthly growth. On-prem shows its
-   staircase of hardware purchases and the build cost before month 0. Marks the month the lines cross.
-4. **Where the money goes.** Stacked breakdown for each option at the current scale: storage,
-   requests, retrieval, egress for the clouds; drives, servers, racks, colocation, energy,
-   bandwidth, staff, build team for on-prem.
-5. **What moves the answer.** Tornado chart of the sensitivity analysis: which assumption shifts the
-   3-year saving most. Expected leaders: cloud discount, egress, drive price.
-6. **Did Dropbox's numbers make sense?** The model at about 500 PB next to the S-1 figures ($92.5M
-   less cloud spend, $53.0M more own-datacenter cost, $39.5M net). 2026 prices vs 2015-era prices.
-   A short paragraph on why they differ.
-7. **Assumptions.** The full table from [assumptions.md](assumptions.md), with confidence marks and
-   source links, plus what the model leaves out.
+Presets: Startup (50 TB), Scale-up (5 PB), Reference (500 PB, the Week 2 workload), Dropbox 2015
+(2015 prices and hardware) and Addendum (the Week 3 PDF's assumptions). Input groups: workload,
+compute, cloud, on-prem hardware, facilities and people. "Reset to sources" restores the documented
+defaults. Light and dark themes.
 
-The control rail has presets at the top (Startup 50 TB, Scale-up 5 PB, Week 2 reference 500 PB,
-Dropbox 2015) and grouped inputs below: workload, cloud, on-prem hardware, facilities and people.
-A "reset to sources" button restores the documented defaults. The current inputs are encoded in the
-URL, so a specific scenario can be shared or bookmarked for the viva.
+## How to present it (viva script, about 6 minutes)
 
-## How to present it (viva script, about 5 minutes)
-
-1. Open on the Startup preset. "At 50 TB, cloud is far cheaper. The fixed cost of a team dominates."
-2. Drag stored data up and watch the break-even point appear. Say where it is and why (the formula
-   from [model.md](model.md) §1).
-3. Switch to the Week 2 reference. Show the 3-year chart and the size of the gap.
-4. Turn the cloud discount up to 30 %. The break-even moves out. "This is why the decision is about
-   negotiation as much as engineering."
-5. Show the tornado chart: which inputs matter, which do not.
-6. End on the S-1 reality check: our model and Dropbox's own figures agree in order of magnitude,
-   and here is why they are not equal.
+1. **Startup preset.** "At 50 TB the cloud costs a few thousand dollars a month. Owning would cost
+   about $180k, almost all of it people. Stay in the cloud."
+2. **Drag Data stored upwards** and watch the on-prem line meet the cloud lines at about 17 PB.
+   Point at the formula strip: net fixed cost of owning divided by the per-TB price gap.
+3. **Reference preset (500 PB).** "We are 29× past break-even. Owning costs $1.84M a month against
+   $6.18M on Google Cloud, the cheaper cloud." Scroll to the timeline: payback at month 13,
+   $181M saved over three years.
+4. **Where the money goes.** Cloud bills are about 90 % storage; on-prem is mostly hardware, then
+   staff.
+5. **Turn the cloud discount up to 40 %.** The saving falls to about $25M. "Negotiation matters as
+   much as engineering; Dropbox never paid list price."
+6. **Tornado.** Hot-data share and discount matter most; colocation price and compute barely move it.
+7. **Calculator check.** Both official calculators agree with the model within 0.2 %. Mention the
+   GiB finding.
+8. **S-1 check.** At 2015 prices the model's S3 bill is about $100M a year; Dropbox reported a
+   $92.5M cut. Same order of magnitude.
+9. If asked about the addendum: click **Addendum**, the dashboard reproduces its $55M on-prem total.
 
 ## Technical shape
 
-- Vite + TypeScript, no framework needed; charts drawn with D3 into SVG so they can be styled
-  properly and exported as images for the report
-- The cost engine is a separate pure module (`src/engine/`) shared with the CLI script
-- Static build, deployable to GitHub Pages so there is a live link
-- Works on a laptop projector (1280 px) and on a phone
+- Vite + TypeScript, no framework; charts drawn with D3 into SVG
+- The cost engine is a separate pure module (`src/engine/`) shared with the CLI
+- `npm run check` tests the engine against hand calculations and both calculators
+- Static build (`npm run build`), deployable anywhere
+- Works on a laptop projector (1280 px) and on a phone (375 px)
 
-## Design direction (to confirm)
+## Design
 
-Tone: **editorial, technical**. It should feel like a careful financial analysis, close in spirit to
-the S-1 filing it checks, not like a SaaS admin panel. Light paper background, a serif for headings
-and big numbers, a monospaced face for figures in tables, one restrained accent colour reserved for
-the break-even point. No gradients, no glass cards, no icon grids.
+Modern, restrained dashboard: warm paper background, Geist and Geist Mono, one coral accent kept for
+on-prem and the break-even point, neutral greys for the two clouds. Icons from UI Essentials Pro
+(licensed). No gradients or decoration; the data is the imagery.

@@ -27,8 +27,13 @@ Owning wins once you are past the point where the cloud's higher price per TB ha
 fixed cost of owning:
 
 ```
-S* = fixed monthly cost of owning / (cloud cost per TB − on-prem cost per TB)
+S* = (fixed monthly cost of owning − fixed monthly cost of renting) / (cloud cost per TB − on-prem cost per TB)
 ```
+
+With no compute the fixed cost of renting is zero and this is the simple form
+`S* = fixed cost of owning / (cloud $/TB − on-prem $/TB)`. The dashboard fits a straight line to each
+option's cost at large scale (cost ≈ fixed + slope × TB) and shows the three numbers next to the
+exact crossing found by search, so the formula can be checked by hand.
 
 Everything in the model exists to estimate those three quantities honestly. Three things move S*
 the most, and the dashboard makes them the main controls:
@@ -47,6 +52,11 @@ break-even suggests.
 ## 2. Cloud model (AWS S3 and Google Cloud Storage)
 
 All monthly, for usable data `S` (TB) at a given month.
+
+**Billing units.** AWS prices storage and transfer per GB (10^9 bytes). Google prices them per GiB
+(2^30 bytes), which is 7.4 % larger. Both calculators confirmed this. The model converts usable data
+into each provider's unit before pricing, so Google's $0.020 is applied to 465.7 million GiB, not
+500 million GB. Request counts depend on bytes written and do not change.
 
 **Storage.** Data is split into three temperature classes by share: hot, warm, cold.
 
@@ -69,6 +79,10 @@ for data from the last day and over 90 % from the last year).
 
 **Egress.** `E = S × egress_share` GB leaving per month, priced on the provider's volume tiers.
 
+**Compute.** A fixed fleet of `N` always-on 32-vCPU servers, the "50 high-compute servers" in the
+implementation guide's example workload. `compute = N × 730 h × hourly price`, on-demand Linux:
+AWS c7i.8xlarge $1.428/h, Google c2d-highcpu-32 $1.1994/h (both from the official calculators).
+
 **Discount.** An enterprise discount `d` applies to the whole bill: `cloud = (sum) × (1 − d)`.
 
 ## 3. On-prem model (Magic Pocket style, in colocation)
@@ -84,11 +98,12 @@ for data from the last day and over 90 % from the last year).
 **Hardware (capital cost).**
 - Drives: `ceil(raw_TB / drive_TB)` × drive price
 - Servers: `ceil(drives / drives_per_server)` × server price (chassis, CPU, RAM, NICs, without drives)
-- Racks: `ceil(servers / servers_per_rack)` × (rack + top-of-rack switching)
+- Compute servers: `N` × bought server price ($15,000 for 2 × 16 cores, 64 GB, 1U)
+- Racks: `ceil(servers / servers_per_rack) + ceil(N / 20)` × (rack + top-of-rack switching)
 - Amortised monthly: `capex / (amortisation_years × 12)`
 
 **Running costs (monthly).**
-- Power draw `kW = drives × W_per_drive + servers × W_per_server`
+- Power draw `kW = drives × W_per_drive + servers × W_per_server + N × 450 W`
 - Colocation: `kW × colo_per_kW_month` (space, cooling, power capacity)
 - Energy: `kW × 730 h × PUE × price_per_kWh`
 - Drive replacement: `drives × AFR / 12 × drive price`
@@ -116,8 +131,8 @@ for data from the last day and over 90 % from the last year).
 
 For the reference workload, move each input between a low and high value (one at a time) and record
 how much the 3-year saving changes. Sorted into a tornado chart. Inputs tested: cloud discount,
-egress share, drive price, redundancy factor, fill target, colocation price, staff count,
-cold share.
+egress share, drive price, redundancy factor, fill target, colocation price, raw PB per engineer,
+hot share, monthly growth and number of compute servers.
 
 ## 6. Reality check against Dropbox's S-1
 
@@ -134,8 +149,22 @@ storage (compute, networking, facilities), 2016 was a transition year with data 
 places, and Dropbox negotiated discounts we cannot see. The point of the check is order of
 magnitude, not a match.
 
-## 7. What the model deliberately leaves out
+## 7. Check against the official calculators
 
-Compute for the application tier, the metadata databases, support contracts, taxes, financing
-cost of capital, and the value of the cloud's elasticity. These are listed on the dashboard so
-nobody mistakes the model for a full TCO.
+The reference workload at month 0 was entered into the AWS Pricing Calculator and the Google Cloud
+Pricing Calculator (15 and 16 November 2026). Totals agree with the model to within 0.2 %:
+
+| | Calculator | Model | Gap |
+| :--- | ---: | ---: | ---: |
+| AWS, storage + requests + retrieval + transfer + 50 × c7i.8xlarge | $7,009,291 | $6,997,186 | −0.2 % |
+| Google Cloud, same workload + 50 × c2d-highcpu-32 | $6,179,527 | $6,179,474 | −0.0 % |
+
+The AWS gap is one unit detail: the AWS calculator converts transfer at 1 TB = 1,024 GB. Line by
+line, with screenshots: [calculators/README.md](calculators/README.md).
+
+## 8. What the model deliberately leaves out
+
+The metadata databases, support contracts, taxes, financing cost of capital, and the value of the
+cloud's elasticity. Compute is a fixed fleet of always-on servers as the guide asks, not Dropbox's
+whole application tier. These limits are listed on the dashboard so nobody mistakes the model for
+a full TCO.

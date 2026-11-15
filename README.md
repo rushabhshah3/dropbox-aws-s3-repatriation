@@ -84,61 +84,70 @@ More detail, including the write path and the hardware generations, is in
 
 ![Pocket Ledger dashboard, reference scenario](docs/Week3/img/dashboard.png)
 
+Also in [dark theme](docs/Week3/img/dashboard-dark.png) and as a [full-page capture](docs/Week3/img/dashboard-full.png).
+
 Pocket Ledger is an interactive rent-vs-buy model for Dropbox's workload. It prices the same
-storage on **AWS S3**, **Google Cloud Storage** and a **Magic Pocket-style fleet of our own**,
-then answers three questions:
+workload (storage plus 50 compute servers) on **AWS**, **Google Cloud** and a **Magic Pocket-style
+fleet of our own**, then answers four questions:
 
 1. **At what size does owning beat renting?** The break-even scale, where the monthly cost
    curves cross.
 2. **When does the investment pay back?** A month-by-month cash simulation with 3% monthly growth,
    an up-front build team, and hardware bought ahead of demand.
-3. **How sure are we?** A one-at-a-time sensitivity analysis on nine inputs, plus a check against
-   the savings Dropbox reported in its S-1.
+3. **How sure are we?** A one-at-a-time sensitivity analysis on ten inputs.
+4. **Do the numbers hold up?** Checked against the official AWS and Google Cloud pricing
+   calculators (within 0.2%) and against the savings Dropbox reported in its S-1.
 
-### Results for the reference workload (500 PB, +3% a month, 2026 list prices)
+### Results for the reference workload (500 PB, +3% a month, 50 compute servers, 2026 list prices)
 
-| | AWS S3 | Google Cloud | Own fleet |
+| | AWS | Google Cloud | Own fleet |
 | :--- | ---: | ---: | ---: |
-| Monthly cost, month 0 | $6.95M | $6.58M | $1.82M |
-| 36-month total | $439M | $416M | $208M |
+| Monthly cost, month 0 | $7.00M | $6.18M | $1.84M |
+| Official calculator, month 0 | $7.01M | $6.18M | |
+| 36-month total | $441M | $390M | $209M |
 
-- **Break-even scale: about 18 PB.** Below that, the fixed cost of a storage team and a 2.5-year
+- **Break-even scale: about 17 PB.** Below that, the fixed cost of a storage team and a 2.5-year
   build is larger than what the cloud charges. Above it, owning gets cheaper with every terabyte.
-- **Payback: month 12.** Over 36 months, owning saves about **$208M** against the cheaper cloud.
-- **Biggest levers:** share of hot data, negotiated cloud discount, redundancy factor, egress and
-  drive price. A 50% cloud discount alone cuts the saving to about $42M.
-- **Fleet at month 0:** 62,500 drives of 24 TB, 625 servers, 79 racks, 788 kW, 19 engineers,
-  $54M of hardware.
-- **S-1 check:** at 2015-era prices the model puts S3 for 500 PB at roughly $100M a year,
+- **Payback: month 13.** Over 36 months, owning saves about **$181M** against the cheaper cloud
+  (Google Cloud).
+- **Biggest levers:** share of hot data, negotiated cloud discount, egress, redundancy factor and
+  drive price. A 40% cloud discount alone cuts the saving to about $25M.
+- **Fleet at month 0:** 62,500 drives of 24 TB, 625 storage servers, 50 compute servers, 82 racks,
+  810 kW, 19 engineers, $55M of hardware.
+- **Calculator check:** Google bills storage per GiB, not per GB. Matching that unit is what brings
+  the model to within 0.2% of both calculators ([details](docs/Week3/calculators/README.md)).
+- **S-1 check:** at 2015-era prices the model puts S3 for 500 PB at about $100M a year,
   against the $92.5M drop in cloud spend Dropbox reported for 2016. The orders of magnitude agree.
 
-The addendum PDF assumes no egress. To reproduce it in the dashboard, set
-*Read out per month* to 0%.
+The Week 3 addendum PDF uses leaner assumptions (all data in S3 Standard, no egress, 1.4×
+redundancy, no build team). The dashboard's **Addendum** preset reproduces it ($55M on-prem against
+the PDF's $54M), and [docs/Week3/README.md](docs/Week3/README.md) explains every difference.
 
 ### How the model works
 
 ```mermaid
 flowchart LR
     subgraph IN[Inputs]
-        W[Workload<br/>size, growth, hot/warm/cold, egress]
+        W[Workload<br/>size, growth, hot/warm/cold, egress, compute servers]
         P[Price lists<br/>AWS + GCP, 2026 or 2015]
         H[Hardware<br/>drives, servers, racks, redundancy]
         F[Facilities and people<br/>colocation, power, staff, build team]
     end
 
-    W --> CB[Cloud bill<br/>tiered storage + requests<br/>+ retrieval + egress − discount]
+    W --> CB[Cloud bill<br/>tiered storage + requests + retrieval<br/>+ egress + compute − discount]
     P --> CB
     W --> FL[Fleet sizing<br/>usable TB × redundancy ÷ fill<br/>→ drives → servers → racks → kW]
     H --> FL
     FL --> OB[On-prem bill<br/>amortised hardware + colocation<br/>+ energy + staff + drive swaps]
     F --> OB
 
-    CB --> BE[Break-even scale<br/>S* = fixed ÷ cloud $/TB − own $/TB]
+    CB --> BE[Break-even scale<br/>S* = net fixed ÷ cloud $/TB − own $/TB]
     OB --> BE
     CB --> TL[36-month timeline<br/>cumulative cash, payback month]
     OB --> TL
-    TL --> SE[Sensitivity<br/>9 inputs, low → high]
+    TL --> SE[Sensitivity<br/>10 inputs, low → high]
     TL --> S1[S-1 reality check]
+    CB --> CC[Official calculator check<br/>AWS + Google, within 0.2%]
 ```
 
 Every formula, with a worked example, is in [docs/Week3/model.md](docs/Week3/model.md).
@@ -217,6 +226,7 @@ Full timeline up to 2026: [docs/timeline.md](docs/timeline.md).
 │       ├── IT457_Week3_Addendum_Dropbox_MagicPocket.pdf
 │       ├── TCO_model.xlsx          line-item spreadsheet behind the addendum
 │       ├── week3_charts.png
+│       ├── calculators/            AWS and Google Cloud calculator estimates, screenshots, comparison
 │       └── img/                    dashboard screenshots
 └── cost-dashboard/                 Pocket Ledger: cost engine, CLI and dashboard
     ├── README.md                   how to run it, and how the code is organised

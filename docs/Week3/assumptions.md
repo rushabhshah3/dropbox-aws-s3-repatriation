@@ -4,34 +4,35 @@ Every number the model uses. Confidence: **H** = from the provider or a primary 
 **M** = from a reputable secondary source, **L** = our estimate, to be checked or argued in the viva.
 Prices checked November 2026. All of these are editable in the dashboard.
 
-## Cloud: AWS S3 (us-east-1)
+## Cloud: AWS (us-east-1)
+
+All confirmed in the AWS Pricing Calculator, 15 November 2026 ([calculators/](calculators/README.md)).
 
 | Item | Value | Conf. | Source |
 | :--- | :--- | :-: | :--- |
-| S3 Standard, first 50 TB | $0.023 / GB-month | M | [CloudZero S3 pricing guide 2026](https://www.cloudzero.com/blog/s3-pricing/) |
-| S3 Standard, next 450 TB | $0.022 | M | same |
-| S3 Standard, over 500 TB | $0.021 | M | same |
-| S3 Standard-IA | $0.0125 | M | same |
-| S3 Glacier Instant Retrieval | $0.004 | M | same |
-| PUT / COPY / POST | $0.005 per 1,000 | M | [Infratally S3 2026](https://infratally.com/articles/aws-s3-pricing-explained-2026/) |
-| GET | $0.0004 per 1,000 | M | same |
-| Retrieval, Standard-IA | $0.01 / GB | M | to confirm on AWS pricing page |
-| Retrieval, Glacier IR | $0.03 / GB | M | to confirm on AWS pricing page |
-| Egress, first 10 TB / month | $0.09 / GB | M | [Upstash S3 2026](https://upstash.com/blog/aws-s3-pricing-explained-2026) |
-| Egress, next 40 TB / 100 TB / over 150 TB | $0.085 / $0.07 / $0.05 | M | AWS published tiers, to confirm |
+| S3 Standard, first 50 TB / next 450 TB / over 500 TB | $0.023 / $0.022 / $0.021 per GB-month | H | AWS Pricing Calculator |
+| S3 Standard-IA | $0.0125 | H | AWS Pricing Calculator |
+| S3 Glacier Instant Retrieval | $0.004 | H | AWS Pricing Calculator |
+| PUT / COPY / POST | $0.005 per 1,000 | H | AWS Pricing Calculator |
+| GET | $0.0004 per 1,000 | H | AWS Pricing Calculator |
+| Retrieval, Standard-IA / Glacier IR | $0.01 / $0.03 per GB | H | AWS Pricing Calculator |
+| Transfer out, first 10 TB / next 40 TB / next 100 TB / over 150 TB | $0.09 / $0.085 / $0.07 / $0.05 per GB | H | AWS Pricing Calculator |
+| EC2 c7i.8xlarge (32 vCPU, 64 GiB), Linux, on-demand | $1.428 per hour | H | AWS Pricing Calculator |
 | Egress waiver when leaving AWS | free (on request) | H | AWS announcement, March 2024 |
 
-## Cloud: Google Cloud Storage (us-central1, regional)
+## Cloud: Google Cloud (us-central1, regional)
+
+All confirmed in the Google Cloud Pricing Calculator, 16 November 2026. **Google bills per GiB**
+(2^30 bytes), so the same data costs 7.4 % fewer units than at a per-GB price.
 
 | Item | Value | Conf. | Source |
 | :--- | :--- | :-: | :--- |
-| Standard | $0.020 / GB-month | M | [nOps GCS pricing 2026](https://www.nops.io/blog/google-cloud-storage-pricing/) |
-| Nearline | $0.010 | M | same |
-| Coldline | $0.004 | M | same |
-| Class A ops (writes) | $0.005 per 1,000 | M | to confirm |
-| Class B ops (reads) | $0.0004 per 1,000 | M | to confirm |
-| Retrieval, Nearline / Coldline | $0.01 / $0.02 per GB | M | [usage.ai GCS](https://www.usage.ai/blogs/gcp/google-cloud-storage-pricing/) |
-| Egress, first TB / at scale | $0.12 → $0.08 / GB | L | single secondary source ([LeanOps](https://leanopstech.com/blog/google-cloud-storage-pricing-2026/)), must confirm |
+| Standard / Nearline / Coldline | $0.020 / $0.010 / $0.004 per GiB-month | H | Google Cloud calculator |
+| Class A ops (writes) | $0.005 per 1,000 | H | Google Cloud calculator |
+| Class B ops (reads) | $0.0004 per 1,000 | H | Google Cloud calculator |
+| Retrieval, Nearline / Coldline | $0.01 / $0.02 per GiB | H | Google Cloud calculator |
+| Internet transfer, Premium tier, to North America | $0.12 first TiB, $0.11 to 10 TiB, $0.08 after (per GiB) | H | Google Cloud calculator (9,095 TiB cost $0.080/GiB) |
+| Compute c2d-highcpu-32 (32 vCPU, 64 GB), on-demand | $1.1994 per hour | H | Google Cloud calculator |
 
 ## On-prem hardware
 
@@ -47,6 +48,7 @@ Prices checked November 2026. All of these are editable in the dashboard.
 | Power per drive | 0.4 W / TB (about 10 W for 24 TB) | H | Dropbox SMR post: about 0.30 W/TB idle, 0.50 W/TB random read |
 | Power per server (non-drive) | 300 W | L | our estimate |
 | Hardware amortisation | 4 years | L | common straight-line life; Dropbox does not publish |
+| Compute server, bought | $15,000 (2 × 16 cores, 64 GB, 1U), 450 W, 20 per rack | L | our estimate for a server matching the 32-vCPU cloud instances |
 
 ## Facilities, network, people
 
@@ -66,6 +68,7 @@ Prices checked November 2026. All of these are editable in the dashboard.
 | Item | Value | Source |
 | :--- | :--- | :--- |
 | Stored data | 500 PB (reference), presets 50 TB and 5 PB | Week 2 report; Dropbox 2015 scale |
+| Compute servers | 50 (reference), 2 (startup), 10 (scale-up) | implementation guide example workload |
 | Growth | 3 % per month | Week 2 report |
 | Read:write | 10:1 | Week 2 report |
 | Average object | 1 MB (blocks are up to 4 MB) | Inside the Magic Pocket, 2016 |
@@ -75,8 +78,8 @@ Prices checked November 2026. All of these are editable in the dashboard.
 | Fill target | 80 % | common practice |
 | Cloud discount | 0 % list (slider to 40 %) | discounts are private; shown as a range |
 
-## To do before submission
+## Still our estimates (say so in the viva)
 
-- Confirm every **M** cloud price on the official AWS and GCP pricing pages and calculators
-- Replace **L** values with quotes where we can find them, or keep them and state them in the viva
-- Fill the 2015-era preset (S3 price in 2015, drive size and $/TB in 2015) from archived pages
+The **L** rows above: server and rack prices, electricity, PUE, transit, staff scaling, salary,
+temperature split and egress share. Each one is a slider in the dashboard, and the sensitivity
+chart shows how much the answer moves if it is wrong.
