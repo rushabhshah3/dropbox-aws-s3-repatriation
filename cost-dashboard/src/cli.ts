@@ -2,21 +2,79 @@
 //   npm run calc                         reference workload (500 PB)
 //   npm run calc -- --preset startup
 //   npm run calc -- --storedTB 20000 --discountPct 25
+//   npm run calc -- --csv                export 36-month timeline to CSV
+//   npm run calc -- --json               dump raw simulation JSON
 import { DEFAULTS, Inputs, PRESETS, withPreset } from './engine/inputs';
 import { S1, sensitivity, summarise } from './engine/model';
 
 const args = process.argv.slice(2);
+
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+Pocket Ledger CLI - Dropbox Magic Pocket Cost Model
+
+Usage:
+  npm run calc -- [options]
+
+Options:
+  --preset <id>       Load preset: ${PRESETS.map((p) => p.id).join(', ')}
+  --csv               Output 36-month timeline in CSV format
+  --json              Output full summary metrics in JSON format
+  --help, -h          Show this help message
+
+Workload Overrides:
+  --storedTB <num>       Usable data size in TB (e.g. 500000)
+  --growthPct <num>      Monthly growth rate % (e.g. 3)
+  --discountPct <num>    Enterprise cloud discount % (e.g. 30)
+  --hotPct <num>         Hot data percentage (e.g. 30)
+  --egressPct <num>      Monthly egress percentage (e.g. 2)
+  --driveTB <num>        Hard drive capacity in TB (e.g. 24)
+  --drivePerTB <num>     Drive price $/TB (e.g. 30)
+`);
+  process.exit(0);
+}
+
+const asCsv = args.includes('--csv');
+const asJson = args.includes('--json');
+const filterArgs = args.filter((a) => a !== '--csv' && a !== '--json');
+
 let inputs: Inputs = { ...DEFAULTS };
-for (let k = 0; k < args.length; k++) {
-  const a = args[k];
-  if (a === '--preset') inputs = withPreset(args[++k]);
+for (let k = 0; k < filterArgs.length; k++) {
+  const a = filterArgs[k];
+  if (a === '--preset') inputs = withPreset(filterArgs[++k]);
   else if (a.startsWith('--')) {
     const key = a.slice(2) as keyof Inputs;
     if (!(key in DEFAULTS)) { console.error(`unknown input: ${key}`); process.exit(1); }
-    const raw = args[++k];
+    const raw = filterArgs[++k];
     (inputs as unknown as Record<string, unknown>)[key] =
       typeof DEFAULTS[key] === 'number' ? Number(raw) : typeof DEFAULTS[key] === 'boolean' ? raw === 'true' : raw;
   }
+}
+
+const s = summarise(inputs);
+
+if (asJson) {
+  console.log(JSON.stringify(s, null, 2));
+  process.exit(0);
+}
+
+if (asCsv) {
+  console.log('Month,Usable_TB,AWS_Monthly,GCP_Monthly,OnPrem_Monthly,AWS_Cumulative,GCP_Cumulative,OnPrem_Cumulative,Hardware_Bought,Installed_Raw_TB');
+  for (const r of s.rows) {
+    console.log([
+      r.month,
+      r.tb.toFixed(1),
+      r.aws.toFixed(2),
+      r.gcp.toFixed(2),
+      r.onprem.toFixed(2),
+      r.awsCum.toFixed(2),
+      r.gcpCum.toFixed(2),
+      r.onpremCum.toFixed(2),
+      r.hardwareBought.toFixed(2),
+      r.installedRawTB.toFixed(1),
+    ].join(','));
+  }
+  process.exit(0);
 }
 
 const $ = (n: number) => (Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString('en-US')}`);
