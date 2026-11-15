@@ -19,7 +19,17 @@ export interface OnPremBill {
   total: number;
 }
 
-export interface Fleet { rawTB: number; drives: number; servers: number; racks: number; kW: number; fte: number; capex: number }
+export interface Fleet {
+  rawTB: number;
+  drives: number;
+  servers: number;
+  racks: number;
+  kW: number;
+  fte: number;
+  capex: number;
+  annualKWh: number;
+  annualCo2Tons: number;
+}
 
 export const prices = (i: Inputs) => (i.priceYear === '2015' ? PRICES_2015 : PRICES_2026);
 
@@ -58,7 +68,11 @@ export function fleetFor(tb: number, i: Inputs): Fleet {
   const kW = (drives * i.driveTB * i.wattsPerTB + servers * i.serverWatts) / 1000;
   const fte = i.baseFTE + rawTB / 1000 / i.pbPerFTE;
   const capex = drives * i.driveTB * i.drivePerTB + servers * i.serverCost + racks * i.rackCost;
-  return { rawTB, drives, servers, racks, kW, fte, capex };
+  const monthlyKWh = kW * HOURS_PER_MONTH * i.pue;
+  const annualKWh = monthlyKWh * 12;
+  // US EPA eGRID national electricity factor: ~0.385 kg CO2e per kWh
+  const annualCo2Tons = (annualKWh * 0.385) / 1000;
+  return { rawTB, drives, servers, racks, kW, fte, capex, annualKWh, annualCo2Tons };
 }
 
 /** Monthly cost of running a given fleet (excludes hardware and build). */

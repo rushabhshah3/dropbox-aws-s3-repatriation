@@ -94,6 +94,7 @@ line('  storage', s.cloud.aws.storage, s.cloud.gcp.storage, s.cloud.azure.storag
 line('  egress', s.cloud.aws.egress, s.cloud.gcp.egress, s.cloud.azure.egress, '');
 
 console.log(`\nFleet: ${s.fleet.drives.toLocaleString()} drives, ${s.fleet.servers} servers, ${s.fleet.racks} racks, ${s.fleet.kW.toFixed(0)} kW, ${s.fleet.fte.toFixed(1)} FTE, capex ${$(s.fleet.capex)}`);
+console.log(`Sustainability (ESG): ${Math.round(s.fleet.annualKWh).toLocaleString()} kWh/yr, ~${Math.round(s.fleet.annualCo2Tons).toLocaleString()} metric tons CO2e/yr (PUE ${inputs.pue})`);
 console.log(`\nBreak-even scale: ${s.breakEvenTB ? size(s.breakEvenTB) : 'not reached below 2 EB'}`);
 console.log(`Payback (cumulative): ${s.payback === null ? 'not within horizon' : `month ${s.payback}`}`);
 console.log(`${inputs.horizonMonths}-month total: AWS ${$(s.horizon.aws)}, GCP ${$(s.horizon.gcp)}, on-prem ${$(s.horizon.onprem)}, saving ${$(s.horizon.saving)}`);
