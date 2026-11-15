@@ -1,4 +1,4 @@
-// Unit prices. Sources and confidence: docs/week3/assumptions.md.
+// Unit prices. Sources and confidence: docs/Week3/assumptions.md.
 // The 2015 set is approximate and only feeds the S-1 reality check.
 
 export interface Tier { upToGB: number; price: number } // price per GB; last tier upToGB = Infinity

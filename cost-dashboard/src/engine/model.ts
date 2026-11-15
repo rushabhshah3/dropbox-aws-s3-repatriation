@@ -1,4 +1,4 @@
-// The cost model. Formulas are documented in docs/week3/model.md.
+// The cost model. Formulas are documented in docs/Week3/model.md.
 import { Inputs } from './inputs';
 import { CloudPrices, PRICES_2015, PRICES_2026, tiered } from './prices';
 

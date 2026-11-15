@@ -13,7 +13,7 @@ import { renderTornado } from './ui/charts/tornado';
 import { money, num, size } from './ui/format';
 import { icon } from './ui/icons';
 
-const REPO = 'https://github.com/rushabhshah3/dropbox-aws-s3-repatriation/blob/main/docs/week3';
+const REPO = 'https://github.com/rushabhshah3/dropbox-aws-s3-repatriation/blob/main/docs/Week3';
 
 const NAV = [
   { group: 'Analysis', items: [

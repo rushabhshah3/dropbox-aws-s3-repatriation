@@ -1,4 +1,4 @@
-// Every editable input, with the documented default. See docs/week3/assumptions.md.
+// Every editable input, with the documented default. See docs/Week3/assumptions.md.
 
 export interface Inputs {
   // workload
