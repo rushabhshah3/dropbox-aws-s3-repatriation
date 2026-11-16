@@ -29,6 +29,17 @@ of the dashboard). On-demand list prices, no discounts, no free tier.
 | **Total** | **7,009,291** | **6,997,186** | **6,179,527** | **6,179,474** |
 | Gap | | −0.2 % | | −0.0 % |
 
+<table>
+  <tr>
+    <td width="50%"><img src="aws-0-summary.jpg" alt="AWS estimate summary"></td>
+    <td width="50%"><img src="gcp-0-summary.jpg" alt="Google Cloud estimate summary"></td>
+  </tr>
+  <tr>
+    <td align="center">AWS estimate: S3 $6,957,168.68 + EC2 $52,122.00</td>
+    <td align="center">Google Cloud estimate (request lines capped, see note)</td>
+  </tr>
+</table>
+
 \* Google's calculator caps operations at 10,000 million per line. We entered 10,000 million of each
 class (which cost $50,000 and $4,000, confirming $0.005 and $0.0004 per 1,000) and scaled to the
 full 15,000 + 150,000 million. The raw calculator total with the capped lines is $6,098,527.
@@ -44,6 +55,58 @@ full 15,000 + 150,000 million. The raw calculator total with the capped lines is
    this scale is a storage bill, which is why Dropbox could leave S3 without leaving AWS entirely.
 4. **Google's compute is 16 % cheaper per hour** for a comparable 32-vCPU, 64 GB machine
    ($1.1994 vs $1.428), and its internet transfer is dearer ($0.08 vs $0.05 per unit at volume).
+
+## Screenshots, line by line
+
+### AWS Pricing Calculator (us-east-1, 15 November 2026)
+
+<table>
+  <tr>
+    <td width="50%"><img src="aws-1-s3-standard.jpg" alt="S3 Standard storage tiers and requests"></td>
+    <td width="50%"><img src="aws-2-s3-glacier-ir.jpg" alt="S3 Glacier Instant Retrieval"></td>
+  </tr>
+  <tr>
+    <td align="center">S3 Standard: storage tiers, PUT and GET requests</td>
+    <td align="center">S3 Glacier Instant Retrieval: storage and retrieval</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="aws-3-s3-data-transfer.jpg" alt="S3 data transfer out"></td>
+    <td width="50%"><img src="aws-4-ec2-compute.jpg" alt="EC2 c7i.8xlarge"></td>
+  </tr>
+  <tr>
+    <td align="center">Data transfer out, 10 PB, tier by tier</td>
+    <td align="center">EC2: 50 × c7i.8xlarge, on-demand</td>
+  </tr>
+</table>
+
+### Google Cloud Pricing Calculator (us-central1, 16 November 2026)
+
+<table>
+  <tr>
+    <td width="50%"><img src="gcp-1-standard.jpg" alt="Cloud Storage Standard"></td>
+    <td width="50%"><img src="gcp-2-nearline.jpg" alt="Cloud Storage Nearline"></td>
+  </tr>
+  <tr>
+    <td align="center">Standard, 150 PB</td>
+    <td align="center">Nearline, 200 PB</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="gcp-3-coldline.jpg" alt="Cloud Storage Coldline"></td>
+    <td width="50%"><img src="gcp-4-compute.jpg" alt="Compute Engine c2d-highcpu-32"></td>
+  </tr>
+  <tr>
+    <td align="center">Coldline, 150 PB</td>
+    <td align="center">Compute Engine: 50 × c2d-highcpu-32</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="gcp-5-egress.jpg" alt="Internet data transfer, Premium tier"></td>
+    <td width="50%"></td>
+  </tr>
+  <tr>
+    <td align="center">Internet transfer, Premium tier, 9,095 TiB</td>
+    <td></td>
+  </tr>
+</table>
 
 ## Files
 

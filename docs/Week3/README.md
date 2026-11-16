@@ -13,6 +13,19 @@ model and how well it is measured and explained, not on application features.
 | Official pricing calculators used (step 2) | The reference workload (500 PB + 50 compute servers) entered into the AWS and Google Cloud calculators; both totals agree with our engine to within 0.2 % | [calculators/](calculators/README.md), dashboard "Calculator check" |
 | On-prem hardware priced (step 3) | Drives, servers, racks, colocation, power, transit, staff, build team, each with a source | [assumptions.md](assumptions.md) |
 
+![Pocket Ledger dashboard, reference scenario](img/dashboard.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="calculators/aws-0-summary.jpg" alt="AWS Pricing Calculator estimate"></td>
+    <td width="50%"><img src="calculators/gcp-0-summary.jpg" alt="Google Cloud Pricing Calculator estimate"></td>
+  </tr>
+  <tr>
+    <td align="center">AWS calculator: $7.01M a month (model $7.00M)</td>
+    <td align="center">Google Cloud calculator: $6.18M a month (model $6.18M)</td>
+  </tr>
+</table>
+
 It also covers the Week 2 report's promises: 3-year TCO, sensitivity on utilisation, drive prices and
 egress, and reconciling the model with the S-1 savings.
 

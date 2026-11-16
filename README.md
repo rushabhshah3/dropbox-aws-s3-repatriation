@@ -82,9 +82,18 @@ More detail, including the write path and the hardware generations, is in
 
 ## Week 3: the cost model (Pocket Ledger)
 
-![Pocket Ledger dashboard, reference scenario](docs/Week3/img/dashboard.png)
+<table>
+  <tr>
+    <td width="50%"><img src="docs/Week3/img/dashboard.png" alt="Pocket Ledger dashboard, light theme, reference scenario"></td>
+    <td width="50%"><img src="docs/Week3/img/dashboard-dark.png" alt="Pocket Ledger dashboard, dark theme, reference scenario"></td>
+  </tr>
+  <tr>
+    <td align="center">Light theme</td>
+    <td align="center">Dark theme</td>
+  </tr>
+</table>
 
-Also in [dark theme](docs/Week3/img/dashboard-dark.png) and as a [full-page capture](docs/Week3/img/dashboard-full.png).
+Every section of the dashboard in one image: [full-page capture](docs/Week3/img/dashboard-full.png).
 
 Pocket Ledger is an interactive rent-vs-buy model for Dropbox's workload. It prices the same
 workload (storage plus 50 compute servers) on **AWS**, **Google Cloud** and a **Magic Pocket-style
@@ -118,6 +127,27 @@ fleet of our own**, then answers four questions:
   the model to within 0.2% of both calculators ([details](docs/Week3/calculators/README.md)).
 - **S-1 check:** at 2015-era prices the model puts S3 for 500 PB at about $100M a year,
   against the $92.5M drop in cloud spend Dropbox reported for 2016. The orders of magnitude agree.
+
+### Checked against the official pricing calculators
+
+We entered the same month-0 workload (500 PB in three storage classes, 165 billion requests,
+10 PB out to the internet, 50 compute servers) into both providers' own calculators.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/Week3/calculators/aws-0-summary.jpg" alt="AWS Pricing Calculator estimate: 7,009,290.68 USD a month"></td>
+    <td width="50%"><img src="docs/Week3/calculators/gcp-0-summary.jpg" alt="Google Cloud Pricing Calculator estimate: 6,098,527.22 USD a month"></td>
+  </tr>
+  <tr>
+    <td align="center">AWS: <b>$7,009,291</b> a month<br>model: $6,997,186 (−0.2%)</td>
+    <td align="center">Google Cloud: <b>$6,179,527</b> a month*<br>model: $6,179,474 (−0.0%)</td>
+  </tr>
+</table>
+
+\* Google's calculator caps operations at 10,000 million per line, so the screenshot shows
+$6,098,527 with capped request lines. Scaled to the full request volume, the total is $6,179,527.
+Every line item and the other nine screenshots are in
+[docs/Week3/calculators/](docs/Week3/calculators/README.md).
 
 The Week 3 addendum PDF uses leaner assumptions (all data in S3 Standard, no egress, 1.4×
 redundancy, no build team). The dashboard's **Addendum** preset reproduces it ($55M on-prem against
