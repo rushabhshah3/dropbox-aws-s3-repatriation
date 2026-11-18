@@ -270,7 +270,7 @@ Full timeline up to 2026: [docs/timeline.md](docs/timeline.md).
 
 ## Running the dashboard
 
-Needs Node 18 or newer.
+Needs Node 20.19 or newer (Vite 8 does not run on Node 18).
 
 ```bash
 cd cost-dashboard

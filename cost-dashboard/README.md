@@ -14,7 +14,7 @@ Theme 3 (Cost and repatriation) deliverable for IT457. The model is explained in
 
 ## Run it
 
-Needs Node 18 or newer.
+Needs Node 20.19 or newer (Vite 8 does not run on Node 18).
 
 ```bash
 npm install
